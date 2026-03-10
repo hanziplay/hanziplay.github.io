@@ -639,7 +639,7 @@
 </div>
 
 <!-- VERSION -->
-<div style="text-align:center;padding:12px;font-size:11px;color:var(--border);font-family:'DM Mono',monospace;position:relative;z-index:1">v1.18</div>
+<div style="text-align:center;padding:12px;font-size:11px;color:var(--border);font-family:'DM Mono',monospace;position:relative;z-index:1">v1.19</div>
 
 <script>
 // ═══════════════════════════════════════
@@ -2052,9 +2052,8 @@ async function signInWithGoogle() {
     const ok = await initFirebase();
     if (!ok) throw new Error('Firebase failed to load');
     const provider = new firebase.auth.GoogleAuthProvider();
-    const result = await firebase.auth().signInWithPopup(provider);
-    firebaseUser = result.user;
-    await onSignedIn();
+    // Use redirect instead of popup — more reliable on all browsers
+    await firebase.auth().signInWithRedirect(provider);
   } catch(e) {
     console.error('Sign in error:', e);
     if (btn) { btn.disabled = false; btn.textContent = '🔑 Sign in with Google'; }
@@ -2531,7 +2530,6 @@ function dismissSplash() {
 }
 
 async function checkAuthState() {
-  // Dismiss splash after 2.2 seconds
   setTimeout(dismissSplash, 2200);
 
   const ok = await initFirebase();
@@ -2540,6 +2538,17 @@ async function checkAuthState() {
     else { showScreen('screen-signin'); }
     return;
   }
+
+  // Handle redirect result first
+  try {
+    const result = await firebase.auth().getRedirectResult();
+    if (result && result.user) {
+      firebaseUser = result.user;
+    }
+  } catch(e) {
+    console.error('Redirect result error:', e);
+  }
+
   firebase.auth().onAuthStateChanged(async user => {
     if (user) {
       firebaseUser = user;
