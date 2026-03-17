@@ -772,8 +772,8 @@
 <!-- EDIT -->
 <div class="screen" id="screen-edit">
   <div class="edit-wrap">
-<div class="edit-header">
-      <input type="text" id="edit-title" class="text-input" style="font-size:22px; font-weight:800; flex:1; margin-bottom:0; padding:8px 12px; background:transparent; border:1.5px solid transparent; border-radius:10px; transition:all 0.2s;" onfocus="this.style.borderColor='var(--ink)'; this.style.background='var(--paper)';" onblur="this.style.borderColor='transparent'; this.style.background='transparent';" />
+    <div class="edit-header">
+      <h2 id="edit-title">Edit Unit</h2>
       <button class="btn-secondary" style="width:auto;padding:8px 16px;font-size:13px" onclick="showLibrary()">← Back</button>
     </div>
     <table class="vocab-table">
@@ -1241,10 +1241,6 @@ function addWordRow() {
 function saveEditedUnit() {
   const unit = units.find(u=>u.id===editingUnitId);
   if (!unit) return;
-  
-  // This new line grabs the title from the text box we created
-  unit.title = document.getElementById('edit-title').value;
-  
   unit.vocab = editVocab.filter(w=>w.simplified||w.english);
   saveUnits(units);
   showLibrary();
