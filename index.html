@@ -1283,8 +1283,7 @@ function studySelectedUnits() {
 
   // Auto-detect script
   selectedScript = autoDetectScript(vocab);
-  document.getElementById('btn-simplified').classList.toggle('active', selectedScript==='simplified');
-  document.getElementById('btn-traditional').classList.toggle('active', selectedScript==='traditional');
+ // script buttons now in settings panel
 
   document.getElementById('word-count-display').textContent = `${vocab.length} word${vocab.length!==1?'s':''}`;
   const name = selectedUnitIds.length > 1 ? `${selectedUnitIds.length} units` : (units.find(u=>u.id===selectedUnitIds[0])?.name||'');
