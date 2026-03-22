@@ -3656,7 +3656,7 @@ function applyMobileTutorialPosition(stepIndex) {
   // Use rAF so mascot layout has settled before we measure it
   requestAnimationFrame(function() {
     const mascotRect = mascot.getBoundingClientRect();
-    const GAP = 480; // gap between bubble bottom and Robbie's head top
+    const GAP = 180; // gap between bubble bottom and Robbie's head top
 
     // Bubble bottom = just above mascot top
     const bubbleBottom = window.innerHeight - mascotRect.top + GAP;
