@@ -104,8 +104,7 @@
   .settings-wrap h2 { font-size:24px; font-weight:800; margin-bottom:32px; }
   .settings-section { margin-bottom:24px; }
   .settings-label { font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--muted); margin-bottom:10px; }
-  .settings-wrap .script-toggle { max-width:400px; }
-  /* EDIT */
+  .settings-wrap .script-toggle { max-width:100%; }  /* EDIT */
   #screen-edit { min-height:calc(100vh - 65px); }
   .edit-wrap { width:100%; max-width:720px; padding:48px 20px; }
   .edit-header { display:flex; align-items:center; gap:16px; margin-bottom:24px; flex-wrap:wrap; }
@@ -746,7 +745,7 @@
       </div>
     </div>
     <div class="settings-section">
-      <button onclick="saveSettings()" class="btn-primary" style="margin-top:8px">Save Settings →</button>
+      <button onclick="saveSettings()" class="btn-primary" style="margin-top:8px;max-width:320px;margin-left:auto;margin-right:auto;display:block;font-size:15px;padding:14px;">Save Settings →</button>
     </div>
     <div class="settings-section" style="margin-top:8px">
       <button onclick="signOut()" style="width:100%;padding:14px;border-radius:10px;border:1.5px solid var(--border);background:transparent;color:var(--muted);font-family:'Syne',sans-serif;font-size:15px;font-weight:600;cursor:pointer;"
