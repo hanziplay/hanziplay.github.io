@@ -3071,9 +3071,12 @@ async function onSignedIn() {
     if (cloudData && cloudData.profile) {
       profileData = cloudData.profile;
       robbieBucks = cloudData.bucks || 0;
-      saveProfileData();
+saveProfileData();
       localStorage.setItem(BUCKS_KEY, String(robbieBucks));
       updateHeaderAvatar();
+      if (profileData.script) selectedScript = profileData.script;
+      if (profileData.inputMethod) inputMethod = profileData.inputMethod;
+      if (profileData.accent) { draftAccent = profileData.accent; selectAccent(profileData.accent); }
     } else if (profileData) {
       await pushProfileToFirebase();
     }
