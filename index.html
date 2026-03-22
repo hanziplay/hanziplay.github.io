@@ -1135,24 +1135,40 @@ function settingsSelectAccent(lang) {
 }
 
 function saveSettings() {
-  // Apply to active study state
-  selectedScript = settingsDraftScript;
-  inputMethod = settingsDraftInput;
-  // Save to profile
+  // 1. Update global operational state
+  selectedScript = settingsDraftScript || selectedScript;
+  inputMethod = settingsDraftInput || inputMethod;
+
+  // 2. Persist to local profile data
   if (profileData) {
-    profileData.script = settingsDraftScript;
-    profileData.inputMethod = settingsDraftInput;
-    profileData.accent = settingsDraftAccent;
+    profileData.script = selectedScript;
+    profileData.inputMethod = inputMethod;
+    profileData.accent = settingsDraftAccent || profileData.accent;
     saveProfileData();
-    if (firebaseUser && window._fbDb) pushProfileToFirebase();
+    
+    // 3. Sync to Firebase immediately if connected
+    if (firebaseUser && window._fbDb) {
+      pushProfileToFirebase();
+    }
   }
-  // Apply accent to profile setup buttons too (for legacy code)
+
+  // 4. Update UI helpers
   if (settingsDraftAccent) {
     draftAccent = settingsDraftAccent;
     selectAccent(settingsDraftAccent);
   }
+
+  // 5. Ensure any active session inherits these changes
+  const session = loadSession();
+  if (session) {
+    session.selectedScript = selectedScript;
+    session.inputMethod = inputMethod;
+    saveSession(session);
+  }
+
   navigateHome();
   showToast('Settings saved ✓');
+}
 }
 function goHome() {
   if (document.getElementById('screen-study').classList.contains('active')) {
