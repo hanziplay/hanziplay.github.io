@@ -1297,7 +1297,7 @@ function studySelectedUnits() {
   studyMode = null;
 
   // Auto-detect script
-  selectedScript = autoDetectScript(vocab);
+  if (!profileData || !profileData.script) selectedScript = autoDetectScript(vocab);
  // script buttons now in settings panel
 
   document.getElementById('word-count-display').textContent = `${vocab.length} word${vocab.length!==1?'s':''}`;
