@@ -134,7 +134,7 @@
   .script-toggle-wrap { display:flex; flex-direction:column; align-items:center; gap:8px; }
   .script-label { font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--muted); }
   .script-toggle { display:flex; border:1.5px solid var(--border); border-radius:10px; overflow:hidden; }
-.script-btn { padding:9px 22px; font-family:'Syne',sans-serif; font-size:14px; font-weight:600; border:none; background:transparent; color:var(--muted); cursor:pointer; transition:all 0.2s; flex:1; text-align:center; }  .script-btn:first-child { border-right:1.5px solid var(--border); }
+.script-btn { padding:16px 22px; font-family:'Syne',sans-serif; font-size:14px; font-weight:600; border:none; background:transparent; color:var(--muted); cursor:pointer; transition:all 0.2s; flex:1; text-align:center; }  .script-btn:first-child { border-right:1.5px solid var(--border); }
   .script-btn.active { background:var(--ink); color:var(--paper); }
   .script-btn:hover:not(.active) { background:var(--red-light); color:var(--ink); }
   .mode-cards { display:flex; gap:14px; flex-wrap:wrap; justify-content:center; }
@@ -722,6 +722,7 @@
 <!-- SETTINGS -->
 <div class="screen" id="screen-settings">
   <div class="settings-wrap">
+<button onclick="showScreen('screen-home')" style="background:none;border:none;color:var(--muted);font-family:'Syne',sans-serif;font-size:14px;font-weight:600;cursor:pointer;padding:0;margin-bottom:20px;display:flex;align-items:center;gap:6px;">← Back</button>
     <h2>⚙️ Settings</h2>
     <div class="settings-section">
       <div class="settings-label">CHARACTER SCRIPT</div>
