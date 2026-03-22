@@ -1642,7 +1642,6 @@ function onInputChange() {
   if(checking) return;
   const inp=document.getElementById('inp-main');
   if(!inp||!inp.value.trim()) return;
-  if(checkAnswerLogic(inp.value)) checkAnswer(false);
 }
 
 // Returns true if the input value is correct for current card/mode
@@ -2120,8 +2119,7 @@ function onInputChange() {
   if(checking) return;
   const inp=document.getElementById('inp-main');
   if(!inp||!inp.value.trim()) return;
-  if(checkAnswerLogic(inp.value)) checkAnswer(false);
-}
+  }
 
 // Returns true if the input value is correct for current card/mode
 function checkAnswerLogic(val) {
