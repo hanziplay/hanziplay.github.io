@@ -3041,8 +3041,7 @@ async function initFirebase() {
     // Set LOCAL persistence — user stays signed in on this device until they sign out
     await firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL);
     window._fbDb = firebase.database();
-    // Test the connection with a quick read
-    await window._fbDb.ref('.info/connected').once('value');
+// (connection test removed — onAuthStateChanged handles offline state)
     return true;
   } catch(e) {
     console.error('Firebase init error:', e);
