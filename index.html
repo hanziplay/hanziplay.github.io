@@ -844,18 +844,21 @@
     <h2 id="mode-title">How do you want to study?</h2>
     <span id="word-count-display" class="word-count-badge">0 words</span>
    
-    <div class="mode-cards">
+<div class="mode-cards">
       <div class="mode-card" onclick="selectMode('A')" id="card-A">
-        <span class="mode-card-icon">英→字</span><h3>Type A</h3>
-        <p id="card-A-desc">See <strong>English</strong><br>Type the character</p>
+        <span class="mode-card-icon">字→英</span><h3>Type A</h3>
+        <p id="card-A-desc">See <strong>character</strong><br>Type the English</p>
       </div>
       <div class="mode-card" onclick="selectMode('B')" id="card-B">
-        <span class="mode-card-icon">字→英</span><h3>Type B</h3>
-        <p id="card-B-desc">See <strong>character</strong><br>Type the English</p>
+        <span class="mode-card-icon">英→字</span><h3>Type B</h3>
+        <p id="card-B-desc">See <strong>English</strong><br>Type the character</p>
       </div>
-      <div class="mode-card" onclick="selectMode('AB')" id="card-AB">
-        <span class="mode-card-icon">全</span><h3>Both (A+B)</h3>
-        <p>Type A then B<br>for every word</p>
+    </div>
+    <div class="mode-card" onclick="selectMode('AB')" id="card-AB" style="width:100%;margin-top:8px;display:flex;flex-direction:row;align-items:center;gap:16px;text-align:left;">
+      <span class="mode-card-icon" style="font-size:32px;flex-shrink:0">🔄</span>
+      <div>
+        <h3 style="margin-bottom:4px">Teacher Robbie's Full Circuit</h3>
+        <p style="font-size:13px">Round 1: see Chinese → type English &nbsp;·&nbsp; Round 2: see English → type Chinese<br>Cards advance automatically as you master each round.</p>
       </div>
     </div>
     <div class="script-toggle-wrap" style="margin-top:4px">
@@ -1492,17 +1495,17 @@ function selectInput(m) {
   document.getElementById('btn-bpmf').classList.toggle('active',m==='bpmf');
   document.getElementById('btn-pinyin').classList.toggle('active',m==='pinyin');
   // Update mode card descriptions
-  if (m==='pinyin') {
-    document.getElementById('card-A-desc').innerHTML = 'See <strong>English</strong><br>Type pinyin + character';
-    document.getElementById('card-B-desc').innerHTML = 'See <strong>character</strong><br>Type pinyin + English';
+if (m==='pinyin') {
+    document.getElementById('card-A-desc').innerHTML = 'See <strong>character</strong><br>Type the English';
+    document.getElementById('card-B-desc').innerHTML = 'See <strong>English</strong><br>Type pinyin + character';
   } else {
-    document.getElementById('card-A-desc').innerHTML = 'See <strong>English</strong><br>Type the character';
-    document.getElementById('card-B-desc').innerHTML = 'See <strong>character</strong><br>Type the English';
+    document.getElementById('card-A-desc').innerHTML = 'See <strong>character</strong><br>Type the English';
+    document.getElementById('card-B-desc').innerHTML = 'See <strong>English</strong><br>Type the character';
   }
 }
 function selectMode(m) {
   studyMode=m;
-  ['A','B','AB'].forEach(x=>document.getElementById('card-'+x).classList.toggle('selected',x===m));
+  ['A','B','AB'].forEach(x=>{ const c=document.getElementById('card-'+x); if(c) c.classList.toggle('selected',x===m); });
   document.getElementById('start-btn').disabled=false;
 }
 function startStudy() {
@@ -1984,17 +1987,17 @@ function addNextBatch() {
   queue = [...queue, ...next];
   return true;
 }
+
 function startStudy() {
   if (!studyMode) return;
   clearSession();
-  stats={correct:0,wrong:0,reveals:0};
-  phase=studyMode==='B'?'B':'A';
+  stats={correct:0,wrong:0,reveals:0}; wordErrorCounts={};
+  phase = studyMode==='B' ? 'B' : 'A';
   initPhase(phase);
   showScreen('screen-study');
   document.getElementById('btn-home-header').style.display='';
   document.getElementById('header-modes').style.display=studyMode==='AB'?'none':'flex';
   updateHeaderBadge();
-  // Write now studying to Firebase
   const unitName = selectedUnitIds.map(id => units.find(u=>u.id===id)?.name).filter(Boolean).join(', ');
   setNowStudying(unitName);
 }
@@ -2002,33 +2005,65 @@ function startStudy() {
 // ═══════════════════════════════════════
 // STUDY ENGINE
 // ═══════════════════════════════════════
+
+// For Full Circuit (AB): each card has r1count and r2count (need 2 each to master)
+// round2Set = set of indices currently in round 2
+let round2Set = new Set();
+let cardCounts = {}; // idx -> {r1:0, r2:0}
+
 function initPhase(p) {
   phase=p; window._pinyinNoticeSeen=false;
   doneSet=new Set(); correctOnce=new Set(); checking=false;
+  round2Set=new Set(); cardCounts={};
   let allIdx = getSelectedVocabIndices();
   if (wordOrder==='shuffle') shuffleArray(allIdx);
   activeSet = allIdx.slice(0, batchSize);
   window._remainingIdx = allIdx.slice(batchSize);
+  // init counts for first batch
+  activeSet.forEach(i => { cardCounts[i]={r1:0,r2:0}; });
   queue = [...activeSet];
   updatePhaseBanner(); nextCard();
 }
+
 function updatePhaseBanner() {
-  document.getElementById('phase-banner').style.display=(studyMode==='AB'&&phase==='B')?'flex':'none';
+  document.getElementById('phase-banner').style.display='none';
 }
+
 function shuffleArray(a) { for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} }
 
 function nextCard() {
   clearInputs(); updateProgress(); updateQueue();
   if (queue.length===0) {
-    const allDone = activeSet.every(i => doneSet.has(i));
-    if (allDone) {
-      const added = addNextBatch();
-      if (added) { nextCard(); return; }
-      if (studyMode==='AB'&&phase==='A') { initPhase('B'); return; }
-      clearSession(); showComplete(); return;
+    if (studyMode==='AB') {
+      // Check if everything is mastered
+      const allMastered = activeSet.every(i => doneSet.has(i));
+      if (allMastered) {
+        const added = addNextBatch();
+        if (added) {
+          // init counts for new cards
+          activeSet.filter(i=>!cardCounts[i]).forEach(i=>{ cardCounts[i]={r1:0,r2:0}; });
+          nextCard(); return;
+        }
+        clearSession(); showComplete(); return;
+      }
+      // Rebuild queue: round2 cards first, then round1 cards not yet done
+      const r2 = activeSet.filter(i => round2Set.has(i) && !doneSet.has(i));
+      const r1 = activeSet.filter(i => !round2Set.has(i) && !doneSet.has(i));
+      queue = [...r2, ...r1];
+      if (wordOrder==='shuffle') { shuffleArray(queue); }
+    } else {
+      const allDone = activeSet.every(i => doneSet.has(i));
+      if (allDone) {
+        const added = addNextBatch();
+        if (added) {
+          activeSet.filter(i=>!cardCounts[i]).forEach(i=>{ cardCounts[i]={r1:0,r2:0}; });
+          nextCard(); return;
+        }
+        clearSession(); showComplete(); return;
+      }
+      queue = activeSet.filter(i => !doneSet.has(i));
+      if (wordOrder==='shuffle') shuffleArray(queue);
     }
-    queue = activeSet.filter(i => !doneSet.has(i));
-    if (wordOrder==='shuffle') shuffleArray(queue);
   }
   const idx=queue[0];
   currentWord={...vocab[idx],idx};
@@ -2045,12 +2080,37 @@ function renderCard() {
   if(rb){rb.classList.remove('used');rb.textContent='Reveal ✨';}
 
   const isPinyin = inputMethod==='pinyin';
+  const isAB = studyMode==='AB';
 
-  if (phase==='A') {
+  // Determine effective phase for this card
+  // AB mode: card is in round2Set = show English→Chinese (phase B logic)
+  //          card not in round2Set = show Chinese→English (phase A logic)
+  // A mode: always show Chinese→English
+  // B mode: always show English→Chinese
+  let effectivePhase;
+  if (isAB) {
+    effectivePhase = round2Set.has(w.idx) ? 'B' : 'A';
+  } else {
+    effectivePhase = phase;
+  }
+
+  if (effectivePhase==='A') {
+    // Round 1 / Type A: see Chinese+pinyin → type English
+    const roundLabel = isAB ? 'Round 1  ·  ' : 'Type A  ·  ';
+    document.getElementById('card-label-top').textContent = roundLabel + 'See character → Type English';
+    document.getElementById('card-prompt').innerHTML =
+      `<div class="prompt-chinese">${esc(ch)}</div>` +
+      `<div style="font-size:15px;color:var(--muted);margin-top:6px;font-family:'DM Mono',monospace">${esc(w.pinyin)}</div>`;
+    document.getElementById('inputs-section').innerHTML =
+      `<div class="input-label">English <div class="streak-dots" id="dots-main"></div></div>
+       <input class="study-input" id="inp-main" type="text" placeholder="English meaning…" autocomplete="off" spellcheck="false" autocorrect="off">
+       <div class="feedback-row" id="fb-main"></div>`;
+  } else {
+    // Round 2 / Type B: see English → type Chinese (BPMF: char only, Pinyin: char+pinyin)
+    const roundLabel = isAB ? 'Round 2  ·  ' : 'Type B  ·  ';
     document.getElementById('card-label-top').textContent = isPinyin
-      ? 'Type A  ·  English → Pinyin + Character'
-      : 'Type A  ·  English → Character';
-  if(isPinyin && !window._pinyinNoticeSeen){ window._pinyinNoticeSeen=true; showToast('⚠️ You must type both pinyin with correct tones AND the English meaning', 5000); }
+      ? roundLabel + 'See English → Type pinyin + character'
+      : roundLabel + 'See English → Type the character';
     document.getElementById('card-prompt').innerHTML = `<div class="prompt-english">${esc(w.english)}</div>`;
     document.getElementById('inputs-section').innerHTML = isPinyin
       ? `<div class="input-label">Pinyin + Character <div class="streak-dots" id="dots-main"></div></div>
@@ -2058,19 +2118,6 @@ function renderCard() {
          <div class="feedback-row" id="fb-main"></div>`
       : `<div class="input-label">Character <div class="streak-dots" id="dots-main"></div></div>
          <input class="study-input chinese-input" id="inp-main" type="text" placeholder="漢字…" autocomplete="off" spellcheck="false" autocorrect="off">
-         <div class="feedback-row" id="fb-main"></div>`;
-  } else {
-    document.getElementById('card-label-top').textContent = isPinyin
-      ? 'Type B  ·  Character → Pinyin + English'
-      : 'Type B  ·  Character → English';
-  if(isPinyin && !window._pinyinNoticeSeen){ window._pinyinNoticeSeen=true; showToast('⚠️ You must type both pinyin with correct tones AND the English meaning', 5000); }
-    document.getElementById('card-prompt').innerHTML = `<div class="prompt-chinese">${esc(ch)}</div>`;
-    document.getElementById('inputs-section').innerHTML = isPinyin
-      ? `<div class="input-label">Pinyin + English <div class="streak-dots" id="dots-main"></div></div>
-         <input class="study-input" id="inp-main" type="text" placeholder="nǐ hǎo hello" autocomplete="off" spellcheck="false" autocorrect="off">
-         <div class="feedback-row" id="fb-main"></div>`
-      : `<div class="input-label">English <div class="streak-dots" id="dots-main"></div></div>
-         <input class="study-input" id="inp-main" type="text" placeholder="English meaning…" autocomplete="off" spellcheck="false" autocorrect="off">
          <div class="feedback-row" id="fb-main"></div>`;
   }
 
@@ -2087,11 +2134,8 @@ function renderCard() {
 }
 
 // ── Pinyin mode matching helpers ──────────────────
-// For pinyin mode, user types e.g. "nǐ hǎo 你好" or "你好 nǐ hǎo"
-// We split on the boundary between latin/tone chars and CJK chars
 function splitPinyinInput(input) {
   input = input.trim();
-  // Split into tokens, separate CJK from latin
   const tokens = input.split(/\s+/);
   const cjk = [], latin = [];
   for (const t of tokens) {
@@ -2101,15 +2145,12 @@ function splitPinyinInput(input) {
   return { charsTyped: cjk.join(''), pinyinTyped: latin.join(' ').trim() };
 }
 
-// Strict pinyin match — tone marks must match exactly, spaces optional
 function pinyinStrictMatch(typed, correct) {
-  // Normalize: remove spaces, lowercase
   const n = s => s.toLowerCase().replace(/\s+/g,'');
   return n(typed) === n(correct);
 }
 
 function onInputChange() {
-  // Hide reveal banner as soon as user starts typing
   const banner=document.getElementById('pinyin-hint-banner');
   if(banner && banner.classList.contains('visible')) {
     banner.classList.remove('visible');
@@ -2119,35 +2160,28 @@ function onInputChange() {
   if(checking) return;
   const inp=document.getElementById('inp-main');
   if(!inp||!inp.value.trim()) return;
-  }
+}
 
 // Returns true if the input value is correct for current card/mode
 function checkAnswerLogic(val) {
   const w=currentWord;
-  if (inputMethod==='pinyin') {
-    if (phase==='A') {
+  const isPinyin = inputMethod==='pinyin';
+  const isAB = studyMode==='AB';
+  const effectivePhase = isAB ? (round2Set.has(w.idx) ? 'B' : 'A') : phase;
+
+  if (effectivePhase==='A') {
+    // Always just English
+    return engMatch(val, w.english);
+  } else {
+    // Phase B
+    if (isPinyin) {
       // Need pinyin + character (either order)
       const {charsTyped, pinyinTyped} = splitPinyinInput(val);
       return norm(charsTyped)===norm(w.chinese) && pinyinStrictMatch(pinyinTyped, w.pinyin);
     } else {
-      // Need pinyin + english: "nǐ hǎo hello"
-      // Split: last word(s) that match any english meaning = english, rest = pinyin
-      const tokens = val.trim().split(/\s+/);
-      // Try all splits: first N tokens = pinyin, rest = english
-      for (let i=1; i<tokens.length; i++) {
-        const pinyinPart = tokens.slice(0,i).join(' ');
-        const engPart = tokens.slice(i).join(' ');
-        if (pinyinStrictMatch(pinyinPart, w.pinyin) && engMatch(engPart, w.english)) return true;
-        // also try reverse: english first, pinyin last (less common but allow)
-        const engFirst = tokens.slice(0,i).join(' ');
-        const pinyinLast = tokens.slice(i).join(' ');
-        if (engMatch(engFirst, w.english) && pinyinStrictMatch(pinyinLast, w.pinyin)) return true;
-      }
-      return false;
+      // BPMF: character only
+      return norm(val)===norm(w.chinese);
     }
-  } else {
-    // BPMF mode — original logic
-    return phase==='A' ? norm(val)===norm(w.chinese) : engMatch(val,w.english);
   }
 }
 
@@ -2156,44 +2190,83 @@ function checkAnswer(manual=true) {
   const w=currentWord, inp=document.getElementById('inp-main');
   if(!inp) return;
   const ok=checkAnswerLogic(inp.value);
+  const isAB = studyMode==='AB';
+
   if(ok){
     checking=true;
     inp.classList.add('correct');
     const fb=document.getElementById('fb-main');
     const chForSpeak = selectedScript==='traditional' ? w.traditional : w.simplified;
-    if(fb) fb.innerHTML=`<span class="feedback-correct">✓</span> <button onclick="speakChinese('${(chForSpeak||'').replace(/'/g,"\'")}')" style="background:none;border:none;font-size:18px;cursor:pointer;padding:0 4px;vertical-align:middle;opacity:0.7;" title="Hear it again">🔊</button>`;
+    if(fb) fb.innerHTML=`<span class="feedback-correct">✓</span> <button onclick="speakChinese('${(chForSpeak||'').replace(/'/g,"\\'")}') " style="background:none;border:none;font-size:18px;cursor:pointer;padding:0 4px;vertical-align:middle;opacity:0.7;" title="Hear it again">🔊</button>`;
     stats.correct++;
     queue.shift();
-    // Speak Chinese word, then advance to next card only after audio finishes
-    const chText = selectedScript==='traditional' ? w.traditional : w.simplified;
-    if(correctOnce.has(w.idx)){
-      correctOnce.delete(w.idx); doneSet.add(w.idx);
-      renderStreakDots(w.idx);
+
+    if (isAB) {
+      if (!cardCounts[w.idx]) cardCounts[w.idx]={r1:0,r2:0};
+      if (round2Set.has(w.idx)) {
+        // Round 2
+        cardCounts[w.idx].r2++;
+        if (cardCounts[w.idx].r2 >= 2) {
+          doneSet.add(w.idx); // mastered!
+        } else {
+          placeInQueue(w.idx, adaptiveCorrectOffset());
+        }
+      } else {
+        // Round 1
+        cardCounts[w.idx].r1++;
+        if (cardCounts[w.idx].r1 >= 2) {
+          round2Set.add(w.idx); // promote to round 2
+          placeInQueue(w.idx, 1); // bring back soon as round 2 card
+        } else {
+          placeInQueue(w.idx, adaptiveCorrectOffset());
+        }
+      }
     } else {
-      correctOnce.add(w.idx);
-      placeInQueue(w.idx, adaptiveCorrectOffset());
-      renderStreakDots(w.idx);
+      // Single mode A or B — need correctOnce (2 correct to master)
+      if(correctOnce.has(w.idx)){
+        correctOnce.delete(w.idx); doneSet.add(w.idx);
+      } else {
+        correctOnce.add(w.idx);
+        placeInQueue(w.idx, adaptiveCorrectOffset());
+      }
     }
+
+    renderStreakDots(w.idx);
+    const chText = selectedScript==='traditional' ? w.traditional : w.simplified;
     setTimeout(async () => {
       await speakChinese(chText || w.simplified);
       setTimeout(nextCard, 150);
     }, 150);
+
   } else if(manual){
     inp.classList.add('wrong');
     const fb=document.getElementById('fb-main');
-    // Show the correct answer format based on mode
+    const isPinyin = inputMethod==='pinyin';
+    const effectivePhase = isAB ? (round2Set.has(w.idx) ? 'B' : 'A') : phase;
     let correctHint;
-    if (inputMethod==='pinyin') {
-      if (phase==='A') correctHint = `${w.pinyin} ${w.chinese}`;
-      else correctHint = `${w.pinyin} ${w.english}`;
+    if (effectivePhase==='A') {
+      correctHint = w.english;
     } else {
-      correctHint = phase==='A' ? w.chinese : w.english;
+      correctHint = isPinyin ? `${w.pinyin} ${w.chinese}` : w.chinese;
     }
-    const isCh = inputMethod==='bpmf' && phase==='A';
+    const isCh = effectivePhase==='B';
     if(fb) fb.innerHTML=`<span class="feedback-wrong">✗</span> <span class="feedback-answer ${isCh?'chinese-answer':''}">${esc(correctHint)}</span>`;
     stats.wrong++;
     wordErrorCounts[w.idx] = (wordErrorCounts[w.idx] || 0) + 1;
-    correctOnce.delete(w.idx); queue.shift();
+
+    // Reset count for this card
+    if (isAB) {
+      if (!cardCounts[w.idx]) cardCounts[w.idx]={r1:0,r2:0};
+      if (round2Set.has(w.idx)) {
+        cardCounts[w.idx].r2=0;
+      } else {
+        cardCounts[w.idx].r1=0;
+      }
+    } else {
+      correctOnce.delete(w.idx);
+    }
+
+    queue.shift();
     placeInQueue(w.idx,5+Math.floor(Math.random()*2));
     renderStreakDots(w.idx);
     window._mustRetype = true;
@@ -2202,6 +2275,36 @@ function checkAnswer(manual=true) {
 }
 
 function renderStreakDots(idx) {
+  const el=document.getElementById('dots-main'); if(!el) return;
+  el.innerHTML='';
+  const isAB = studyMode==='AB';
+  if (isAB) {
+    // 4 dots: 2 for round1, 2 for round2
+    const counts = cardCounts[idx] || {r1:0,r2:0};
+    const inR2 = round2Set.has(idx);
+    const isDone = doneSet.has(idx);
+    for(let i=0;i<2;i++){
+      const d=document.createElement('div');
+      const filled = isDone || (inR2 && i<2) || (!inR2 && counts.r1>i);
+      d.className='streak-dot'+(filled?' filled':'');
+      d.title='Round 1';
+      el.appendChild(d);
+    }
+    const sep=document.createElement('span');
+    sep.style.cssText='width:6px;display:inline-block';
+    el.appendChild(sep);
+    for(let i=0;i<2;i++){
+      const d=document.createElement('div');
+      const filled = isDone || (inR2 && counts.r2>i);
+      d.className='streak-dot'+(filled?' filled':'');
+      d.title='Round 2';
+      el.appendChild(d);
+    }
+  } else {
+    const f=correctOnce.has(idx)||doneSet.has(idx), s=doneSet.has(idx);
+    for(let i=0;i<2;i++){const d=document.createElement('div');d.className='streak-dot'+((i===0&&f)||(i===1&&s)?' filled':'');el.appendChild(d);}
+  }
+}
   const el=document.getElementById('dots-main'); if(!el) return;
   el.innerHTML='';
   const f=correctOnce.has(idx)||doneSet.has(idx), s=doneSet.has(idx);
