@@ -1586,27 +1586,39 @@ function renderCard() {
     // Round 1 / Type A: see Chinese+pinyin → type English
     const roundLabel = isAB ? 'Round 1  ·  ' : 'Type A  ·  ';
     document.getElementById('card-label-top').textContent = roundLabel + 'See character → Type English';
-    document.getElementById('card-prompt').innerHTML =
-      `<div class="prompt-chinese">${esc(ch)}</div>` +
-      `<div style="font-size:15px;color:var(--muted);margin-top:6px;font-family:'DM Mono',monospace">${esc(w.pinyin)}</div>`;
-    document.getElementById('inputs-section').innerHTML =
-      `<div class="input-label">English <div class="streak-dots" id="dots-main"></div></div>
-       <input class="study-input" id="inp-main" type="text" placeholder="English meaning…" autocomplete="off" spellcheck="false" autocorrect="off">
-       <div class="feedback-row" id="fb-main"></div>`;
+   document.getElementById('card-prompt').innerHTML =
+      `<div class="prompt-chinese">${esc(ch)}</div>
+      <div style="font-size:15px;color:var(--muted);margin-top:6px;font-family:'DM Mono',monospace">${esc(w.pinyin)}</div>`;
+    document.getElementById('inputs-section').innerHTML = isPinyin
+      ? `<div class="input-label">Pinyin <div class="streak-dots" id="dots-main"></div></div>
+      <input class="study-input" id="inp-main" type="text" placeholder="pīnyīn…" autocomplete="off" spellcheck="false" autocorrect="off">
+      <div class="feedback-row" id="fb-main"></div>
+      <div class="input-label">English</div>
+      <input class="study-input" id="inp-english" type="text" placeholder="English meaning…" autocomplete="off" spellcheck="false" autocorrect="off">
+      <div class="feedback-row" id="fb-english"></div>`
+      : `<div class="input-label">Character <div class="streak-dots" id="dots-main"></div></div>
+      <input class="study-input chinese-input" id="inp-main" type="text" placeholder="漢字…" autocomplete="off" spellcheck="false" autocorrect="off">
+      <div class="feedback-row" id="fb-main"></div>
+      <div class="input-label">English</div>
+      <input class="study-input" id="inp-english" type="text" placeholder="English meaning…" autocomplete="off" spellcheck="false" autocorrect="off">
+      <div class="feedback-row" id="fb-english"></div>`;
   } else {
     // Round 2 / Type B: see English → type Chinese (BPMF: char only, Pinyin: char+pinyin)
     const roundLabel = isAB ? 'Round 2  ·  ' : 'Type B  ·  ';
     document.getElementById('card-label-top').textContent = isPinyin
       ? roundLabel + 'See English → Type pinyin + character'
       : roundLabel + 'See English → Type the character';
-    document.getElementById('card-prompt').innerHTML = `<div class="prompt-english">${esc(w.english)}</div>`;
+   document.getElementById('card-prompt').innerHTML = `<div class="prompt-english">${esc(w.english)}</div>`;
     document.getElementById('inputs-section').innerHTML = isPinyin
-      ? `<div class="input-label">Pinyin + Character <div class="streak-dots" id="dots-main"></div></div>
-         <input class="study-input" id="inp-main" type="text" placeholder="nǐ hǎo 你好 (either order)" autocomplete="off" spellcheck="false" autocorrect="off">
-         <div class="feedback-row" id="fb-main"></div>`
+      ? `<div class="input-label">Pinyin <div class="streak-dots" id="dots-main"></div></div>
+      <input class="study-input" id="inp-main" type="text" placeholder="pīnyīn…" autocomplete="off" spellcheck="false" autocorrect="off">
+      <div class="feedback-row" id="fb-main"></div>
+      <div class="input-label">Character</div>
+      <input class="study-input chinese-input" id="inp-english" type="text" placeholder="漢字…" autocomplete="off" spellcheck="false" autocorrect="off">
+      <div class="feedback-row" id="fb-english"></div>`
       : `<div class="input-label">Character <div class="streak-dots" id="dots-main"></div></div>
-         <input class="study-input chinese-input" id="inp-main" type="text" placeholder="漢字…" autocomplete="off" spellcheck="false" autocorrect="off">
-         <div class="feedback-row" id="fb-main"></div>`;
+      <input class="study-input chinese-input" id="inp-main" type="text" placeholder="漢字…" autocomplete="off" spellcheck="false" autocorrect="off">
+      <div class="feedback-row" id="fb-main"></div>`;
   }
 
   renderStreakDots(w.idx);
