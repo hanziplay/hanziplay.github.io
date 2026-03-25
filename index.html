@@ -1398,7 +1398,15 @@ dz.addEventListener('drop', e=>{
   const f=e.dataTransfer.files[0]; if(f){const r=new FileReader();r.onload=ev=>{document.getElementById('paste-area').value=ev.target.result;checkImportReady();};r.readAsText(f,'UTF-8');}
 });
 
-
+function parseLine(line) {
+    const parts = line.split('\t');
+    if (parts.length < 3) return null;
+    return {
+        chars: parts[0],
+        pinyin: parts[1],
+        meaning: parts[2]
+    };
+}
 function doImport() {
   const name = document.getElementById('unit-name-input').value.trim();
   const lines = document.getElementById('paste-area').value.split('\n');
