@@ -1398,60 +1398,6 @@ dz.addEventListener('drop', e=>{
   const f=e.dataTransfer.files[0]; if(f){const r=new FileReader();r.onload=ev=>{document.getElementById('paste-area').value=ev.target.result;checkImportReady();};r.readAsText(f,'UTF-8');}
 });
 
-function doImport() {
-  const name = document.getElementById('unit-name-input').value.trim();
-  const lines = document.getElementById('paste-area').value.split('\n');
-  const vocab = lines.map(parseLine).filter(Boolean);
-  if (!vocab.length) { alert('No words recognized. Try using the AI prompt helper to format your list first.'); return; }
-  units.push({ id:'unit_'+Date.now(), name, vocab, createdAt:Date.now() });
-  saveUnits(units);
-  document.getElementById('unit-name-input').value = '';
-  document.getElementById('paste-area').value = '';
-  document.getElementById('import-btn').disabled = true;
-  showLibrary();
-}
-
-function parseLine(line) {
-  line = line.trim();
-  if (!line || line.startsWith('//') || line.startsWith('#')) return null;
-  const numRe = /^[a-züāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ]+\d/i;
-  function cvtPinyin(s) {
-    const tm = {a:['ā','á','ǎ','à','a'],e:['ē','é','ě','è','e'],i:['ī','í','ǐ','ì','i'],o:['ō','ó','ǒ','ò','o'],u:['ū','ú','ǔ','ù','u'],ü:['ǖ','ǘ','ǚ','ǜ','ü'],v:['ǖ','ǘ','ǚ','ǜ','ü']};
-    return s.replace(/([a-züv]+)(\d)/gi,(_,sy,tn)=>{
-      const t=parseInt(tn)-1; let o=sy;
-      for(const v of ['a','e','o','i','u','ü','v']){if(o.toLowerCase().includes(v)&&tm[v]&&t>=0&&t<=4){o=o.replace(new RegExp(v,'i'),()=>tm[v][t]||v);break;}}
-      return o;
-    }).replace(/\s+/g,' ').trim();
-  }
-  function splitScripts(raw) {
-    const m=raw.match(/^([^\[]+)\[([^\]]+)\]$/);
-    if(m) return {simplified:m[1].trim(),traditional:m[2].trim()};
-    return {simplified:raw.trim(),traditional:raw.trim()};
-  }
-  const tabs = line.split('\t');
-  if (tabs.length >= 2) {
-    const {simplified,traditional} = splitScripts(tabs[0].trim());
-    const rawPin = tabs[1].trim();
-    const pinyin = numRe.test(rawPin) ? cvtPinyin(rawPin) : rawPin;
-    const english = (tabs.slice(2).join(' ').trim()||'').split(';')[0].trim();
-    return {simplified,traditional,pinyin,english};
-  }
-  const m2 = line.match(/^(.+?)\[([^\]]+)\]\s*\/(.+?)\/?$/);
-  if (m2) {
-    const {simplified,traditional} = splitScripts(m2[1].trim());
-    const bc = m2[2].trim();
-    const english = m2[3].replace(/\//g,', ').replace(/,\s*$/,'').trim();
-    const ci = bc.search(/,\s*[a-zA-Zāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ]/);
-    const pinyin = ci!==-1 ? bc.slice(ci+1).trim() : bc;
-    return {simplified,traditional,pinyin,english};
-  }
-  const p3 = line.split(/[·|,]/).map(s=>s.trim()).filter(Boolean);
-  if (p3.length >= 3) {
-    const {simplified,traditional} = splitScripts(p3[0]);
-    return {simplified,traditional,pinyin:p3[1],english:p3[2]};
-  }
-  return null;
-}
 
 function doImport() {
   const name = document.getElementById('unit-name-input').value.trim();
@@ -2298,9 +2244,11 @@ function renderStreakDots(idx) {
       const filled = isDone || (inR2 && counts.r2>i);
       d.className='streak-dot'+(filled?' filled':'');
       d.title='Round 2';
-      el.appendChild(d);
+el.appendChild(d);
     }
- 
+  }
+}
+
 function showToast(msg, duration=3500){
   let t=document.getElementById('hanzi-toast');
   if(!t){t=document.createElement('div');t.id='hanzi-toast';
