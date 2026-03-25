@@ -3007,18 +3007,22 @@ const FB_KEY = 'hanziplay_firebase_config';
 let fbInitialized = false;
 let firebaseUser = null; // signed-in Google user
 
-// Hardcoded config — no need to paste
-const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyDFK1sqp7LfOLzNlSXfy_GUR2H4xsgPrrc",
-  authDomain: "hanziplay-f3950.firebaseapp.com",
-  databaseURL: "https://hanziplay-f3950-default-rtdb.firebaseio.com",
-  projectId: "hanziplay-f3950",
-  storageBucket: "hanziplay-f3950.firebasestorage.app",
-  messagingSenderId: "28588742568",
-  appId: "1:28588742668:web:d8f7da3d1299194bba3629"
+// Copy and paste this to replace what you deleted:
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDtol-JqOiWjrIfmw5FdL T4mWWDqYr824M",
+  authDomain: "hanziplay-44695.firebaseapp.com",
+  projectId: "hanziplay-44695",
+  storageBucket: "hanziplay-44695.firebasestorage.app",
+  messagingSenderId: "152389388932",
+  appId: "1:152389388932:web:62c146b0a753a90e8d10d1",
+  measurementId: "G-R0Z6K6V7RH"
 };
 
-function loadFirebaseConfig() { return FIREBASE_CONFIG; }
+// This line starts the connection to your NEW project
+firebase.initializeApp(firebaseConfig);
+
+function loadFirebaseConfig() { return firebaseConfig; }
 function saveFirebaseConfig(cfg) {}
 
 // ── Firebase init ─────────────────────────────────
@@ -3031,7 +3035,7 @@ async function initFirebase() {
       await loadScript('https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js');
     }
     if (!fbInitialized) {
-      firebase.initializeApp(FIREBASE_CONFIG);
+      firebase.initializeApp(firebaseConfig);
       fbInitialized = true;
     }
     // Set LOCAL persistence — user stays signed in on this device until they sign out
