@@ -2305,11 +2305,6 @@ function renderStreakDots(idx) {
     for(let i=0;i<2;i++){const d=document.createElement('div');d.className='streak-dot'+((i===0&&f)||(i===1&&s)?' filled':'');el.appendChild(d);}
   }
 }
-  const el=document.getElementById('dots-main'); if(!el) return;
-  el.innerHTML='';
-  const f=correctOnce.has(idx)||doneSet.has(idx), s=doneSet.has(idx);
-  for(let i=0;i<2;i++){const d=document.createElement('div');d.className='streak-dot'+((i===0&&f)||(i===1&&s)?' filled':'');el.appendChild(d);}
-}
 function showToast(msg, duration=3500){
   let t=document.getElementById('hanzi-toast');
   if(!t){t=document.createElement('div');t.id='hanzi-toast';
