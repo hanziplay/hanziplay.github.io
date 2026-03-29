@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>漢字練習 · HanziPlay</title>
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="icon" type="image/png" href="icon.png">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="HanziPlay">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&family=DM+Mono:wght@400;500&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
@@ -522,9 +527,11 @@
       <div class="inputs-section" id="inputs-section"></div>
       <div class="pinyin-hint-banner" id="pinyin-hint-banner"></div>
       <div class="submit-row">
-        <button class="btn-primary" id="btn-submit" onmousedown="event.preventDefault()" onclick="checkAnswer(true)" style="width:100%;margin-bottom:8px;">Enter ↵</button>
-        <button class="btn-hint" id="btn-hint" onclick="askRobbieHint()" style="width:100%;margin-bottom:8px;">🧑‍🏫 Ask Teacher Robbie for a hint</button>
-        <button class="btn-skip" onclick="alreadyKnowIt()" style="width:100%;">Skip & show answer →</button>
+        <div style="display:flex;gap:8px;margin-bottom:8px;">
+          <button class="btn-hint" id="btn-robbie" onclick="askRobbieHint()" style="flex:1;">Ask Teacher Robbie for a hint 🧑‍🏫</button>
+          <button class="btn-skip" id="btn-already-know" onclick="alreadyKnowIt()" style="flex:1;">I already know it ✓</button>
+        </div>
+        <button class="btn-primary" id="btn-submit" onmousedown="event.preventDefault()" onclick="checkAnswer(true)" style="width:100%;">Enter ↵</button>
       </div>
     </div>
   </div>

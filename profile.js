@@ -256,6 +256,66 @@ function updateHeaderAvatar() {
 function awardBucks(wordsCompleted) {
   if (!profileData) return;
   robbieBucks += wordsCompleted;
+  // Save session duration for leaderboard tooltip
+  if (sessionStartTime) {
+    const durationSecs = Math.round((Date.now() - sessionStartTime) / 1000);
+    const prev = parseInt(localStorage.getItem('hanziplay_total_study_time')) || 0;
+    localStorage.setItem('hanziplay_total_study_time', String(prev + durationSecs));
+    sessionStartTime = null;
+    if (window._fbDb && firebaseUser) syncBucksToFirebase(); // push updated duration
+  }
   saveBucks();
+}
+
+// ── Streak tracking ───────────────────────────────────
+const STREAK_KEY = 'hanziplay_streak';
+
+function loadStreak() {
+  try { return JSON.parse(localStorage.getItem(STREAK_KEY)) || { currentStreak: 0, lastLoginDate: null, longestStreak: 0 }; }
+  catch { return { currentStreak: 0, lastLoginDate: null, longestStreak: 0 }; }
+}
+
+function saveStreak(data) {
+  localStorage.setItem(STREAK_KEY, JSON.stringify(data));
+}
+
+function checkAndUpdateStreak() {
+  if (!profileData) return;
+  const today = new Date().toDateString();
+  const streak = loadStreak();
+
+  if (streak.lastLoginDate === today) return; // already logged in today, no change
+
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const wasYesterday = streak.lastLoginDate === yesterday.toDateString();
+
+  if (wasYesterday) {
+    streak.currentStreak += 1;
+  } else if (streak.lastLoginDate === null) {
+    streak.currentStreak = 1;
+  } else {
+    streak.currentStreak = 1; // streak broken, reset to 1
+  }
+
+  streak.longestStreak = Math.max(streak.longestStreak || 0, streak.currentStreak);
+  streak.lastLoginDate = today;
+
+  saveStreak(streak);
+
+  // Award streak bonus: Day N = $N
+  const bonus = streak.currentStreak;
+  robbieBucks += bonus;
+  saveBucks();
+
+  if (streak.currentStreak > 1) {
+    showToast(`🔥 ${streak.currentStreak}-day streak! +$${bonus.toFixed(2)} Robbie Bucks bonus!`, 4000);
+  } else {
+    showToast(`👋 Welcome back! +$1.00 login bonus!`, 3000);
+  }
+}
+
+function getStreakData() {
+  return loadStreak();
 }
 

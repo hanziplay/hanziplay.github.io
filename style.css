@@ -1,11 +1,12 @@
   :root {
-    --ink: #1a1210; --paper: #f5f0e8; --red: #c0392b; --red-light: #e8d5d3;
+    --ink: #0f1a2e; --paper: #eef4f0; --red: #c0392b; --red-light: #e8d5d3;
     --gold: #b8860b; --gold-light: #f0e6c0; --green: #2d6a4f; --green-light: #d4ede1;
-    --muted: #7a6e64; --border: #d4c9b8; --card-bg: #fdfaf4;
+    --muted: #6b7e74; --border: #c8d8ce; --card-bg: #f6faf7;
   }
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family:'Syne',sans-serif; background:var(--paper); color:var(--ink); min-height:100vh; display:flex; flex-direction:column; }
-  body::before { content:''; position:fixed; inset:0; background-image:linear-gradient(rgba(26,18,16,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(26,18,16,0.04) 1px,transparent 1px); background-size:40px 40px; pointer-events:none; z-index:0; }
+  body::before { content:''; position:fixed; inset:0; background-image:linear-gradient(rgba(15,26,46,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(15,26,46,0.04) 1px,transparent 1px); background-size:40px 40px; pointer-events:none; z-index:0; }
+  body::after { content:'v2.0'; position:fixed; bottom:18px; right:22px; font-family:'Syne',sans-serif; font-size:11px; font-weight:800; letter-spacing:1.5px; color:var(--border); opacity:0.7; pointer-events:none; z-index:9999; }
 
   /* HEADER */
   header { position:relative; z-index:10; padding:16px 32px; display:flex; align-items:center; justify-content:space-between; border-bottom:1.5px solid var(--border); background:var(--paper); }
@@ -178,7 +179,7 @@
   .btn-reveal:hover { background:var(--gold-light); }
   .btn-reveal.used { opacity:0.4; cursor:default; pointer-events:none; }
   .btn-skip { padding:12px 15px; background:transparent; color:var(--muted); border:1.5px solid var(--border); border-radius:10px; font-family:'Syne',sans-serif; font-size:13px; font-weight:600; cursor:pointer; transition:all 0.2s; }
-  .btn-hint { padding:12px 15px; background:transparent; color:#7c5cba; border:1.5px solid #7c5cba; border-radius:10px; font-family:'Syne',sans-serif; font-size:13px; font-weight:700; cursor:pointer; transition:all 0.2s; white-space:nowrap; }
+  .btn-hint { padding:12px 15px; background:transparent; color:#7c5cba; border:1.5px solid #7c5cba; border-radius:10px; font-family:'Syne',sans-serif; font-size:13px; font-weight:700; cursor:pointer; transition:all 0.2s; }
   .btn-hint:hover { background:rgba(124,92,186,0.1); }
   .btn-hint.used { opacity:0.4; cursor:default; pointer-events:none; }
   .submit-row { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }

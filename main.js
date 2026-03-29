@@ -93,6 +93,7 @@ let queue = [], doneSet = new Set(), correctOnce = new Set();
 let currentWord = null, checking = false;
 let phase = 'A';
 let stats = { correct:0, wrong:0, reveals:0 };
+let sessionStartTime = null; // tracks when current study session began
 let wordErrorCounts = {}; // idx -> wrong count for session report
 let editingUnitId = null, editVocab = [];
 

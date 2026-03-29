@@ -86,6 +86,9 @@ saveProfileData();
 
   if (profileData) syncBucksToFirebase();
 
+  // ── Check and update login streak ──────────────────────────
+  if (profileData) checkAndUpdateStreak();
+
   // ── Load units from Firebase (vocab sync) ──────────────────
   const hadCloudUnits = await loadUnitsFromFirebase();
   if (hadCloudUnits) {
@@ -213,15 +216,18 @@ function loadScript(src) {
 }
 
 function syncBucksToFirebase() {
-  if (!window._fbDb || !profileData) return;
-  const userId = firebaseUser ? firebaseUser.uid : profileData.name.toLowerCase().replace(/\s+/g,'_') + '_' + (profileData.zodiac||'').toLowerCase();
+  if (!window._fbDb || !profileData || !profileData.name) return;
+  const userId = firebaseUser ? firebaseUser.uid : ((profileData.name||'user').toLowerCase().replace(/\s+/g,'_') + '_' + (profileData.zodiac||'').toLowerCase());
   // Update leaderboard
   window._fbDb.ref('leaderboard/' + userId).set({
-    name: profileData.name,
-    zodiac: profileData.zodiac,
-    vibe: profileData.vibe,
-    color: profileData.color,
-    bucks: robbieBucks,
+    name: profileData.name || 'User',
+    zodiac: profileData.zodiac || '',
+    vibe: profileData.vibe || '',
+    color: profileData.color || '',
+    bucks: robbieBucks || 0,
+    streak: getStreakData().currentStreak || 0,
+    lastLogin: getStreakData().lastLoginDate || null,
+    totalStudyTime: parseInt(localStorage.getItem('hanziplay_total_study_time')) || 0,
     updatedAt: Date.now()
   });
   // Update user profile node if signed in
@@ -267,12 +273,18 @@ async function loadFirebaseScores() {
       const emoji = getAvatarEmoji(e.zodiac, e.vibe);
       const bg = getAvatarBg(e.color);
       const rankLabel = i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}`;
+      const streakText = e.streak > 0 ? `${e.streak}-day streak` : `No streak yet`;
+      const lastLoginText = e.lastLogin ? `Last seen: ${new Date(e.lastLogin).toLocaleDateString('en-US',{month:'short',day:'numeric'})}` : `Last seen: —`;
+      const totalMins = e.totalStudyTime ? Math.round(e.totalStudyTime / 60) : 0;
+      const studyHours = totalMins >= 60 ? `${Math.floor(totalMins/60)}h ${totalMins%60}m` : totalMins > 0 ? `${totalMins}m` : `—`;
+      const sessionText = `Study time: ${studyHours}`;
       return `<div class="lb-entry ${isMe?'me':''}">
         <div class="lb-rank">${rankLabel}</div>
         <div class="lb-avatar" style="background:${bg}">${emoji}</div>
         <div class="lb-info">
           <div class="lb-name">${esc(e.name)}${isMe?' <span style="font-size:11px;color:var(--gold)">(you)</span>':''}</div>
           <div class="lb-detail">${e.vibe||''} ${e.zodiac||''}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;font-family:'Syne',sans-serif;font-weight:600">${streakText} · ${lastLoginText} · ${sessionText}</div>
         </div>
         <div style="text-align:right">
           <div class="lb-bucks">${formatBucks(e.bucks||0)}</div>
@@ -306,6 +318,7 @@ let notifCheckInterval = null;
 // ── Write "now studying" to Firebase when session starts ──
 function setNowStudying(unitName) {
   if (!firebaseUser || !window._fbDb || !profileData) return;
+  sessionStartTime = Date.now(); // record session start for duration tracking
   window._fbDb.ref('nowStudying/' + firebaseUser.uid).set({
     name: profileData.name,
     zodiac: profileData.zodiac,

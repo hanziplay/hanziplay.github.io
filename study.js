@@ -499,9 +499,21 @@ function renderCard() {
     const roundLabel = isAB ? 'Round 1  ·  ' : 'Type A  ·  ';
     document.getElementById('card-label-top').textContent = roundLabel + 'See character + pinyin → Type character + English';
     const displayCh = ch || w.simplified || w.traditional || '';
+    const charsArr = [...displayCh];
+    const syllablesArr = (w.pinyin || '').split(' ');
+    const colWidth = 58;
+    const charsHtml = charsArr.map(c =>
+      `<span style="display:inline-block;width:${colWidth}px;text-align:center">${esc(c)}</span>`
+    ).join('');
+    const pyHtml = charsArr.map((_, i) =>
+      `<span style="display:inline-block;width:${colWidth}px;text-align:center;font-size:13px;color:var(--muted);font-family:'DM Mono',monospace">${esc(syllablesArr[i] || '')}</span>`
+    ).join('');
     document.getElementById('card-prompt').innerHTML =
-      `<div class="prompt-chinese">${esc(displayCh)}</div>
-      <div style="font-size:15px;color:var(--muted);margin-top:6px;font-family:'DM Mono',monospace">${esc(w.pinyin)}</div>`;
+      `<div class="prompt-chinese" style="letter-spacing:0">${charsHtml}</div>
+      <div style="position:relative;margin-top:4px;display:inline-block;min-width:130px">
+        <div id="pinyin-reveal-row" style="visibility:hidden">${pyHtml}</div>
+        <div id="pinyin-sticker" onclick="document.getElementById('pinyin-sticker').style.display='none';document.getElementById('pinyin-reveal-row').style.visibility='visible'" style="position:absolute;top:0;left:0;width:100%;height:100%;background:#7c5cba;color:#fff;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:'Syne',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.8px;padding:5px 10px;box-sizing:border-box;user-select:none;white-space:nowrap;text-transform:uppercase">REVEAL PINYIN</div>
+      </div>`;
     document.getElementById('inputs-section').innerHTML =
       `<div class="input-label">Character + English <div class="streak-dots" id="dots-main"></div></div>
       <input class="study-input chinese-input" id="inp-main" type="text" placeholder="e.g. 狗 dog" autocomplete="off" spellcheck="false" autocorrect="off" autocapitalize="off">
@@ -632,25 +644,6 @@ function checkAnswer(manual=true) {
   const ok=checkAnswerLogic(val);
   const isAB = studyMode==='AB';
 
-  // If card was marked wrong this round (via hint/reveal), a correct answer still doesn't count
-  if(ok && w._wrongThisRound){
-    inp.classList.add('wrong');
-    const fb=document.getElementById('fb-main');
-    if(fb) fb.innerHTML=`<span style="font-size:12px;color:var(--muted);font-family:'Syne',sans-serif">✓ Correct — but you already used a hint. You'll get another chance! 🔄</span>`;
-    // Move card to end of queue without resetting count
-    queue.shift();
-    if (studyAlgorithm === 'batched') {
-      batchQueue = batchQueue.filter(i => i !== w.idx);
-      batchQueue.push(w.idx);
-    } else {
-      queue.push(w.idx);
-    }
-    window._mustRetype = true;
-    setTimeout(()=>{ inp.value=''; inp.classList.remove('wrong','correct'); inp.focus(); window._mustRetype=false;
-      studyAlgorithm==='batched' ? nextBatchedCard() : nextCard(); }, 1400);
-    return;
-  }
-
   if(ok){
     checking=true;
     inp.classList.add('correct');
@@ -699,7 +692,7 @@ function checkAnswer(manual=true) {
 
     renderStreakDots(w.idx);
     const chText = w.chinese || (selectedScript==='traditional' ? w.traditional : w.simplified) || w.simplified || w.traditional || '';
-    if (areFeedbackSoundsOn()) { playCorrectTone(); setTimeout(() => { speakChinese(chText).then(() => setTimeout(nextCard, 150)); }, 700); } else { speakChinese(chText).then(() => setTimeout(nextCard, 150)); }
+    if (areFeedbackSoundsOn()) { playCorrectTone(); setTimeout(() => { const _safety=setTimeout(nextCard,3500); speakChinese(chText).then(() => { clearTimeout(_safety); setTimeout(nextCard, 150); }); }, 700); } else { const _safety=setTimeout(nextCard,3500); speakChinese(chText).then(() => { clearTimeout(_safety); setTimeout(nextCard, 150); }); }
 
   } else if(manual){
     inp.classList.add('wrong');
@@ -853,7 +846,7 @@ function speakChinese(text) {
       const fallback = setTimeout(() => {
         console.warn('[speakChinese] fallback timeout fired — onend never came');
         resolve();
-      }, 4000);
+      }, 1500);
       utter.onstart = () => console.log('[speakChinese] onstart fired');
       utter.onend = () => { console.log('[speakChinese] onend fired'); clearTimeout(fallback); resolve(); };
       utter.onerror = (e) => { console.error('[speakChinese] onerror:', e.error); clearTimeout(fallback); resolve(); };
@@ -934,13 +927,9 @@ function askRobbieHint(){
     const effectivePhase = isAB ? (round2Set.has(w.idx) ? 'B' : 'A') : phase;
     let hintHtml;
     if (effectivePhase==='A') {
-      const syllables = w.pinyin.split(' ');
-      const masked = syllables.map(s => {
-        if (s.length <= 1) return s;
-        const mid = Math.ceil(s.length / 2);
-        return s[0] + '_'.repeat(mid - 1) + s[mid] + (s.length > mid + 1 ? '…' : '');
-      }).join(' ');
-      hintHtml = `<strong>🧑‍🏫 Robbie:</strong> Pinyin → <span style="font-family:'DM Mono',monospace;letter-spacing:2px;color:var(--gold)">${esc(masked)}</span>`;
+      const words = w.english.split(' ');
+      const masked = words.map((wd, i) => i === 0 ? wd[0] + '_'.repeat(Math.max(1, wd.length - 1)) : wd[0] + '…').join(' ');
+      hintHtml = `<strong>🧑‍🏫 Robbie:</strong> English → <span style="font-family:'DM Mono',monospace;color:var(--gold)">${esc(masked)}</span>`;
     } else {
       const words = w.english.split(' ');
       const masked = words.map((wd, i) => i === 0 ? wd[0] + '_'.repeat(Math.max(1, wd.length - 1)) : wd[0] + '…').join(' ');
