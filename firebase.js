@@ -76,7 +76,7 @@ saveProfileData();
       updateHeaderAvatar();
       if (profileData.script) selectedScript = profileData.script;
       if (profileData.inputMethod) inputMethod = profileData.inputMethod;
-      if (profileData.accent) { draftAccent = profileData.accent; selectAccent(profileData.accent); }
+      if (profileData.accent) { draftAccent = profileData.accent; }
     } else if (profileData) {
       await pushProfileToFirebase();
     }

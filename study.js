@@ -1,23 +1,195 @@
+// ── Correct / Wrong feedback tones ───────────────────────────────────────
+// Inject yellow "half" dot style for streak dots
+(function() {
+  const s = document.createElement('style');
+  s.textContent = `.streak-dot.half { background: var(--gold, #f0a500) !important; opacity: 1 !important; }`;
+  document.head.appendChild(s);
+})();
+function areFeedbackSoundsOn() {
+  try {
+    const v = localStorage.getItem('hanziFeedbackSounds');
+    return v === null ? true : v === 'true'; // default ON
+  } catch(e) { return true; }
+}
+function setFeedbackSounds(on) {
+  try { localStorage.setItem('hanziFeedbackSounds', on ? 'true' : 'false'); } catch(e) {}
+}
+function playCorrectTone() {
+  if (!areFeedbackSoundsOn()) return;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.connect(ctx.destination);
+    [[659.25, 0.00], [783.99, 0.09]].forEach(([freq, start]) => {
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.connect(g); g.connect(gain);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
+      g.gain.setValueAtTime(0.8, ctx.currentTime + start);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + 0.18);
+      osc.start(ctx.currentTime + start);
+      osc.stop(ctx.currentTime + start + 0.2);
+    });
+    setTimeout(() => ctx.close(), 600);
+  } catch(e) {}
+}
+function playWrongTone() {
+  if (!areFeedbackSoundsOn()) return;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(220, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(160, ctx.currentTime + 0.25);
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.28);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.3);
+    setTimeout(() => ctx.close(), 600);
+  } catch(e) {}
+}
+
+// ── Hint tone: confused "huh?" — wobbly dip then questioning uptick ──────
+function playHintTone() {
+  if (!areFeedbackSoundsOn()) return;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const master = ctx.createGain();
+    master.gain.setValueAtTime(0.13, ctx.currentTime);
+    master.connect(ctx.destination);
+
+    // "Huh" — descend then wobble
+    const huh = ctx.createOscillator();
+    const huhGain = ctx.createGain();
+    huh.connect(huhGain); huhGain.connect(master);
+    huh.type = 'sine';
+    huh.frequency.setValueAtTime(440, ctx.currentTime);
+    huh.frequency.linearRampToValueAtTime(300, ctx.currentTime + 0.12);
+    huh.frequency.linearRampToValueAtTime(320, ctx.currentTime + 0.20);
+    huh.frequency.linearRampToValueAtTime(290, ctx.currentTime + 0.28);
+    huhGain.gain.setValueAtTime(0.0, ctx.currentTime);
+    huhGain.gain.linearRampToValueAtTime(0.7, ctx.currentTime + 0.03);
+    huhGain.gain.setValueAtTime(0.7, ctx.currentTime + 0.22);
+    huhGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+    huh.start(ctx.currentTime);
+    huh.stop(ctx.currentTime + 0.38);
+
+    // "?" — small upward questioning blip after a pause
+    const q = ctx.createOscillator();
+    const qGain = ctx.createGain();
+    q.connect(qGain); qGain.connect(master);
+    q.type = 'triangle';
+    q.frequency.setValueAtTime(380, ctx.currentTime + 0.42);
+    q.frequency.linearRampToValueAtTime(520, ctx.currentTime + 0.58);
+    qGain.gain.setValueAtTime(0.0, ctx.currentTime + 0.42);
+    qGain.gain.linearRampToValueAtTime(0.45, ctx.currentTime + 0.44);
+    qGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.62);
+    q.start(ctx.currentTime + 0.42);
+    q.stop(ctx.currentTime + 0.65);
+
+    setTimeout(() => ctx.close(), 1000);
+  } catch(e) {}
+}
+
+// ── Already-know-it tone: bright "wow!" ascending sweep ──────────────────
+function playAlreadyKnowTone() {
+  if (!areFeedbackSoundsOn()) return;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const master = ctx.createGain();
+    master.gain.setValueAtTime(0.16, ctx.currentTime);
+    master.connect(ctx.destination);
+    // Quick upward swoosh on a sine, then a bright sparkle chord
+    const swoosh = ctx.createOscillator();
+    const swooshGain = ctx.createGain();
+    swoosh.connect(swooshGain); swooshGain.connect(master);
+    swoosh.type = 'sine';
+    swoosh.frequency.setValueAtTime(300, ctx.currentTime);
+    swoosh.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.18);
+    swooshGain.gain.setValueAtTime(0.6, ctx.currentTime);
+    swooshGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.22);
+    swoosh.start(ctx.currentTime);
+    swoosh.stop(ctx.currentTime + 0.25);
+    // Sparkle: E6 + G6 together
+    [[1318.5, 0.18], [1568.0, 0.18], [2093.0, 0.26]].forEach(([freq, start]) => {
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.connect(g); g.connect(master);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
+      g.gain.setValueAtTime(0.5, ctx.currentTime + start);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + 0.18);
+      osc.start(ctx.currentTime + start);
+      osc.stop(ctx.currentTime + start + 0.2);
+    });
+    setTimeout(() => ctx.close(), 800);
+  } catch(e) {}
+}
+function playCelebrationSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const master = ctx.createGain();
+    master.gain.setValueAtTime(0.18, ctx.currentTime);
+    master.connect(ctx.destination);
+
+    // Notes: quick ascending fanfare + held chord
+    const notes = [
+      { freq: 523.25, start: 0.00, dur: 0.12 },   // C5
+      { freq: 659.25, start: 0.10, dur: 0.12 },   // E5
+      { freq: 783.99, start: 0.20, dur: 0.12 },   // G5
+      { freq: 1046.5, start: 0.30, dur: 0.40 },   // C6
+      { freq: 783.99, start: 0.30, dur: 0.40 },   // G5 (chord)
+      { freq: 659.25, start: 0.30, dur: 0.40 },   // E5 (chord)
+      // little sparkle tail
+      { freq: 1318.5, start: 0.55, dur: 0.10 },   // E6
+      { freq: 1568.0, start: 0.65, dur: 0.20 },   // G6
+    ];
+
+    notes.forEach(({ freq, start, dur }) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(master);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
+      gain.gain.setValueAtTime(0, ctx.currentTime + start);
+      gain.gain.linearRampToValueAtTime(1, ctx.currentTime + start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur);
+      osc.start(ctx.currentTime + start);
+      osc.stop(ctx.currentTime + start + dur + 0.05);
+    });
+
+    // Close context after sound finishes
+    setTimeout(() => ctx.close(), 1200);
+  } catch(e) {
+    console.warn('playCelebrationSound failed:', e);
+  }
+}
+
 // ═══════════════════════════════════════
 // MODE SELECT
 // ═══════════════════════════════════════
 function selectScript(s) {
   selectedScript=s;
-  document.getElementById('btn-simplified').classList.toggle('active',s==='simplified');
-  document.getElementById('btn-traditional').classList.toggle('active',s==='traditional');
+  document.getElementById('s-btn-simplified').classList.toggle('active',s==='simplified');
+  document.getElementById('s-btn-traditional').classList.toggle('active',s==='traditional');
 }
 function selectInput(m) {
   inputMethod=m;
-  document.getElementById('btn-bpmf').classList.toggle('active',m==='bpmf');
-  document.getElementById('btn-pinyin').classList.toggle('active',m==='pinyin');
+  document.getElementById('s-btn-bpmf').classList.toggle('active',m==='bpmf');
+  document.getElementById('s-btn-pinyin').classList.toggle('active',m==='pinyin');
   // Update mode card descriptions
   if (m==='pinyin') {
-    document.getElementById('card-A-desc').innerHTML = 'See <strong>English</strong><br>Type pinyin + character';
-    document.getElementById('card-B-desc').innerHTML = 'See <strong>character</strong><br>Type pinyin + English';
+    document.getElementById('card-A-desc').innerHTML = 'See <strong>character + pinyin</strong><br>Type character + English';
+    document.getElementById('card-B-desc').innerHTML = 'See <strong>English</strong><br>Type pinyin + character';
     showToast('📱 This mode is best when on a phone!');
   } else {
-    document.getElementById('card-A-desc').innerHTML = 'See <strong>English</strong><br>Type the character';
-    document.getElementById('card-B-desc').innerHTML = 'See <strong>character</strong><br>Type the English';
+    document.getElementById('card-A-desc').innerHTML = 'See <strong>character + pinyin</strong><br>Type character + English';
+    document.getElementById('card-B-desc').innerHTML = 'See <strong>English</strong><br>Type the character';
   }
 }
 function selectMode(m) {
@@ -40,28 +212,99 @@ function addNextBatch() {
 
 function startStudy() {
   if (!studyMode) return;
-  clearSession();
-  stats={correct:0,wrong:0,reveals:0}; wordErrorCounts={};
-  phase = studyMode==='B' ? 'B' : 'A';
-  initPhase(phase);
-  showScreen('screen-study');
-  document.getElementById('btn-home-header').style.display='';
-  document.getElementById('header-modes').style.display=studyMode==='AB'?'none':'flex';
-  updateHeaderBadge();
-  const unitName = selectedUnitIds.map(id => units.find(u=>u.id===id)?.name).filter(Boolean).join(', ');
-  setNowStudying(unitName);
+  showVolumeTip(() => {
+    clearSession();
+    stats={correct:0,wrong:0,reveals:0}; wordErrorCounts={}; window._alreadyKnownCount=0;
+    phase = studyMode==='B' ? 'B' : 'A';
+    initPhase(phase);
+    showScreen('screen-study');
+    document.getElementById('btn-home-header').style.display='';
+    document.getElementById('header-modes').style.display=studyMode==='AB'?'none':'flex';
+    updateHeaderBadge();
+    const unitName = selectedUnitIds.map(id => units.find(u=>u.id===id)?.name).filter(Boolean).join(', ');
+    setNowStudying(unitName);
+  });
+}
+
+function showVolumeTip(onContinue) {
+  const existing = document.getElementById('volume-tip-modal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'volume-tip-modal';
+  modal.style.cssText = `
+    position:fixed;inset:0;z-index:9999;
+    display:flex;align-items:center;justify-content:center;
+    background:rgba(0,0,0,0.55);
+    animation:fadeIn 0.2s ease;
+  `;
+  modal.innerHTML = `
+    <div style="
+      background:var(--paper, #fffdf8);
+      border-radius:24px;
+      padding:36px 28px 28px;
+      max-width:320px;
+      width:90%;
+      text-align:center;
+      box-shadow:0 8px 40px rgba(0,0,0,0.18);
+      font-family:'Syne',sans-serif;
+    ">
+      <div style="font-size:52px;margin-bottom:12px">🔊</div>
+      <div style="font-size:18px;font-weight:800;color:var(--ink,#1a1210);margin-bottom:10px">
+        Teacher Robbie Tip
+      </div>
+      <div style="font-size:14px;color:var(--ink,#1a1210);line-height:1.65;margin-bottom:8px">
+        Make sure your volume is on! Listen to the word after each correct answer.
+      </div>
+      <div style="
+        font-size:15px;font-weight:700;
+        color:var(--red,#c0392b);
+        background:rgba(192,57,43,0.08);
+        border-radius:12px;
+        padding:12px 14px;
+        margin:14px 0 22px;
+        line-height:1.5;
+      ">
+        🗣️ Say it out loud to yourself.<br>
+        <span style="font-weight:400;font-size:13px">Seriously!!!!!!!! THIS is the thing that makes it stick.</span>
+      </div>
+      <button id="volume-tip-ok" style="
+        width:100%;
+        padding:14px;
+        border-radius:14px;
+        border:none;
+        background:var(--red,#c0392b);
+        color:#fff;
+        font-size:15px;
+        font-weight:700;
+        font-family:'Syne',sans-serif;
+        cursor:pointer;
+      ">加油！💪</button>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+  modal.querySelector('#volume-tip-ok').addEventListener('click', () => {
+    modal.remove();
+    onContinue();
+  });
 }
 
 // ═══════════════════════════════════════
 // STUDY ENGINE
 // ═══════════════════════════════════════
 
-// For Full Circuit (AB): each card has r1count and r2count (need 2 each to master)
-// round2Set = set of indices currently in round 2
+// For Full Circuit (AB): each card has r1 and r2 sub-objects
+// Single mode: cardCounts[idx] = { count: 0, retryAfter: 0 }
+// AB mode:     cardCounts[idx] = { r1: { count: 0, retryAfter: 0 }, r2: { count: 0, retryAfter: 0 } }
+// retryAfter = timestamp (ms) after which the card may be shown again; 0 = show immediately
 let round2Set = new Set();
-let cardCounts = {}; // idx -> {r1:0, r2:0}
+let cardCounts = {};
+let phaseSnapshots = {};
+
 
 function initPhase(p) {
+  if (studyAlgorithm === 'batched') { initBatchedPhase(p); return; }
   phase=p; window._pinyinNoticeSeen=false;
   doneSet=new Set(); correctOnce=new Set(); checking=false;
   round2Set=new Set(); cardCounts={};
@@ -70,7 +313,7 @@ function initPhase(p) {
   activeSet = allIdx.slice(0, batchSize);
   window._remainingIdx = allIdx.slice(batchSize);
   // init counts for first batch
-  activeSet.forEach(i => { cardCounts[i]={r1:0,r2:0}; });
+  activeSet.forEach(i => { cardCounts[i] = _initCardCount(); });
   queue = [...activeSet];
   updatePhaseBanner(); nextCard();
 }
@@ -82,42 +325,150 @@ function updatePhaseBanner() {
 function shuffleArray(a) { for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} }
 
 function nextCard() {
-  clearInputs(); updateProgress(); updateQueue();
-  if (queue.length===0) {
-    if (studyMode==='AB') {
-      // Check if everything is mastered
-      const allMastered = activeSet.every(i => doneSet.has(i));
-      if (allMastered) {
-        const added = addNextBatch();
-        if (added) {
-          // init counts for new cards
-          activeSet.filter(i=>!cardCounts[i]).forEach(i=>{ cardCounts[i]={r1:0,r2:0}; });
-          nextCard(); return;
-        }
-        clearSession(); showComplete(); return;
-      }
-      // Rebuild queue: round2 cards first, then round1 cards not yet done
-      const r2 = activeSet.filter(i => round2Set.has(i) && !doneSet.has(i));
-      const r1 = activeSet.filter(i => !round2Set.has(i) && !doneSet.has(i));
-      queue = [...r2, ...r1];
-      if (wordOrder==='shuffle') { shuffleArray(queue); }
+  if (studyAlgorithm === 'batched') { nextBatchedCard(); return; }
+  clearInputs(); updateProgress();
+
+  // Build the full pending list (not done)
+  const pending = activeSet.filter(i => !doneSet.has(i));
+
+  // All mastered?
+  if (pending.length === 0) {
+    const added = addNextBatch();
+    if (added) {
+      activeSet.filter(i=>!cardCounts[i]).forEach(i=>{ cardCounts[i]=_initCardCount(); });
+      nextCard(); return;
+    }
+    clearSession(); showComplete(); return;
+  }
+
+  const now = Date.now();
+
+  // Among pending, find cards ready to show (retryAfter <= now), sorted soonest first
+  const ready = pending
+    .filter(i => _getRetryAfter(i) <= now)
+    .sort((a,b) => _getRetryAfter(a) - _getRetryAfter(b));
+
+  // If nothing is ready yet, just show the soonest card anyway (never block the user)
+  const sorted = pending.sort((a,b) => _getRetryAfter(a) - _getRetryAfter(b));
+  queue = ready.length > 0 ? ready : sorted;
+  const idx = queue[0];
+  currentWord = {...vocab[idx], idx};
+  renderCard();
+}
+
+// ═══════════════════════════════════════
+// BATCHED INTRODUCTION ENGINE
+// ═══════════════════════════════════════
+// batchQueue: ordered array of vocab indices for current batch (strict order, wrong → end)
+// cardCounts[i].count: 0, 1, or 2 (2 = done)
+// No retryAfter timers — strictly queue-ordered
+
+let batchQueue = [];      // current ordered queue within this batch
+let batchAllIdx = [];     // all remaining indices not yet in a batch
+
+function initBatchedPhase(p) {
+  phase=p; window._pinyinNoticeSeen=false;
+  doneSet=new Set(); correctOnce=new Set(); checking=false;
+  round2Set=new Set(); cardCounts={};
+  batchAllIdx = getSelectedVocabIndices();
+  if (wordOrder==='shuffle') shuffleArray(batchAllIdx);
+  _loadNextBatchedBatch();
+  updatePhaseBanner();
+  nextBatchedCard();
+}
+
+function _loadNextBatchedBatch() {
+  const size = batchedBatchSize || 5;
+  const next = batchAllIdx.splice(0, size);
+  activeSet = next;
+  next.forEach(i => { if (!cardCounts[i]) cardCounts[i] = { count: 0 }; });
+  batchQueue = [...next];
+}
+
+function nextBatchedCard() {
+  clearInputs(); updateProgress();
+
+  // Remove mastered cards from queue
+  batchQueue = batchQueue.filter(i => !doneSet.has(i));
+
+  // Batch complete?
+  if (batchQueue.length === 0) {
+    if (batchAllIdx.length > 0) {
+      // Load next batch
+      _loadNextBatchedBatch();
+      nextBatchedCard(); return;
+    }
+    // All done
+    clearSession(); showComplete(); return;
+  }
+
+  const idx = batchQueue[0];
+  currentWord = {...vocab[idx], idx};
+  renderCard();
+}
+
+function _batchedMarkCorrect(w) {
+  const isAB = studyMode === 'AB';
+  if (!cardCounts[w.idx]) cardCounts[w.idx] = { count: 0 };
+
+  if (isAB) {
+    // AB mode: r1 count → promote to r2 → r2 count → done
+    if (!cardCounts[w.idx].r1) cardCounts[w.idx] = { r1:{count:0}, r2:{count:0} };
+    if (round2Set.has(w.idx)) {
+      cardCounts[w.idx].r2.count++;
+      if (cardCounts[w.idx].r2.count >= 2) doneSet.add(w.idx);
     } else {
-      const allDone = activeSet.every(i => doneSet.has(i));
-      if (allDone) {
-        const added = addNextBatch();
-        if (added) {
-          activeSet.filter(i=>!cardCounts[i]).forEach(i=>{ cardCounts[i]={r1:0,r2:0}; });
-          nextCard(); return;
-        }
-        clearSession(); showComplete(); return;
+      cardCounts[w.idx].r1.count++;
+      if (cardCounts[w.idx].r1.count >= 2) {
+        round2Set.add(w.idx);
+        cardCounts[w.idx].r2 = {count:0};
+        // re-add to end of batch for round 2
+        batchQueue = batchQueue.filter(i => i !== w.idx);
+        batchQueue.push(w.idx);
       }
-      queue = activeSet.filter(i => !doneSet.has(i));
-      if (wordOrder==='shuffle') shuffleArray(queue);
+    }
+  } else {
+    cardCounts[w.idx].count++;
+    if (cardCounts[w.idx].count >= 2) {
+      doneSet.add(w.idx);
+    } else {
+      correctOnce.add(w.idx);
     }
   }
-  const idx=queue[0];
-  currentWord={...vocab[idx],idx};
-  renderCard();
+}
+
+function _batchedMarkWrong(w) {
+  const isAB = studyMode === 'AB';
+  if (!cardCounts[w.idx]) cardCounts[w.idx] = { count: 0 };
+
+  if (isAB) {
+    if (!cardCounts[w.idx].r1) cardCounts[w.idx] = { r1:{count:0}, r2:{count:0} };
+    if (round2Set.has(w.idx)) { cardCounts[w.idx].r2.count = 0; }
+    else { cardCounts[w.idx].r1.count = 0; }
+  } else {
+    cardCounts[w.idx].count = 0;
+    correctOnce.delete(w.idx);
+  }
+  // Move to end of batch queue
+  batchQueue = batchQueue.filter(i => i !== w.idx);
+  batchQueue.push(w.idx);
+}
+
+// Helper: get retryAfter for a card index in current mode
+function _getRetryAfter(i) {
+  const cc = cardCounts[i];
+  if (!cc) return 0;
+  const isAB = studyMode === 'AB';
+  if (isAB) {
+    return round2Set.has(i) ? cc.r2.retryAfter : cc.r1.retryAfter;
+  }
+  return cc.retryAfter;
+}
+
+function _initCardCount() {
+  const isAB = studyMode === 'AB';
+  if (isAB) return { r1: {count:0, retryAfter:0}, r2: {count:0, retryAfter:0} };
+  return { count: 0, retryAfter: 0 };
 }
 
 function renderCard() {
@@ -125,9 +476,8 @@ function renderCard() {
   checking=false;
   const ch=selectedScript==='traditional'?w.traditional:w.simplified;
   w.chinese=ch;
+  w._hintStage=undefined; w._hintMarkedWrong=false; w.wasRevealed=false; w._wrongThisRound=false;
   hidePinyinBanner();
-  const rb=document.getElementById('btn-reveal');
-  if(rb){rb.classList.remove('used');rb.textContent='Reveal ✨';}
 
   const isPinyin = inputMethod==='pinyin';
   const isAB = studyMode==='AB';
@@ -145,41 +495,30 @@ function renderCard() {
   }
 
   if (effectivePhase==='A') {
-    // Round 1 / Type A: see Chinese+pinyin → type English
+    // Round 1 / Type A: see Chinese+pinyin → type character + English in one box
     const roundLabel = isAB ? 'Round 1  ·  ' : 'Type A  ·  ';
-    document.getElementById('card-label-top').textContent = roundLabel + 'See character → Type English';
-   document.getElementById('card-prompt').innerHTML =
-      `<div class="prompt-chinese">${esc(ch)}</div>
+    document.getElementById('card-label-top').textContent = roundLabel + 'See character + pinyin → Type character + English';
+    const displayCh = ch || w.simplified || w.traditional || '';
+    document.getElementById('card-prompt').innerHTML =
+      `<div class="prompt-chinese">${esc(displayCh)}</div>
       <div style="font-size:15px;color:var(--muted);margin-top:6px;font-family:'DM Mono',monospace">${esc(w.pinyin)}</div>`;
-    document.getElementById('inputs-section').innerHTML = isPinyin
-      ? `<div class="input-label">Pinyin <div class="streak-dots" id="dots-main"></div></div>
-      <input class="study-input" id="inp-main" type="text" placeholder="pīnyīn…" autocomplete="off" spellcheck="false" autocorrect="off">
-      <div class="feedback-row" id="fb-main"></div>
-      <div class="input-label">English</div>
-      <input class="study-input" id="inp-english" type="text" placeholder="English meaning…" autocomplete="off" spellcheck="false" autocorrect="off">
-      <div class="feedback-row" id="fb-english"></div>`
-      : `<div class="input-label">Character <div class="streak-dots" id="dots-main"></div></div>
-      <input class="study-input chinese-input" id="inp-main" type="text" placeholder="漢字…" autocomplete="off" spellcheck="false" autocorrect="off">
-      <div class="feedback-row" id="fb-main"></div>
-      <div class="input-label">English</div>
-      <input class="study-input" id="inp-english" type="text" placeholder="English meaning…" autocomplete="off" spellcheck="false" autocorrect="off">
-      <div class="feedback-row" id="fb-english"></div>`;
+    document.getElementById('inputs-section').innerHTML =
+      `<div class="input-label">Character + English <div class="streak-dots" id="dots-main"></div></div>
+      <input class="study-input chinese-input" id="inp-main" type="text" placeholder="e.g. 狗 dog" autocomplete="off" spellcheck="false" autocorrect="off" autocapitalize="off">
+      <div class="feedback-row" id="fb-main"></div>`;
   } else {
-    // Round 2 / Type B: see English → type Chinese (BPMF: char only, Pinyin: char+pinyin)
+    // Round 2 / Type B: see English → type Chinese
     const roundLabel = isAB ? 'Round 2  ·  ' : 'Type B  ·  ';
     document.getElementById('card-label-top').textContent = isPinyin
       ? roundLabel + 'See English → Type pinyin + character'
       : roundLabel + 'See English → Type the character';
-   document.getElementById('card-prompt').innerHTML = `<div class="prompt-english">${esc(w.english)}</div>`;
+    document.getElementById('card-prompt').innerHTML = `<div class="prompt-english">${esc(w.english)}</div>`;
     document.getElementById('inputs-section').innerHTML = isPinyin
-      ? `<div class="input-label">Pinyin <div class="streak-dots" id="dots-main"></div></div>
-      <input class="study-input" id="inp-main" type="text" placeholder="pīnyīn…" autocomplete="off" spellcheck="false" autocorrect="off">
-      <div class="feedback-row" id="fb-main"></div>
-      <div class="input-label">Character</div>
-      <input class="study-input chinese-input" id="inp-english" type="text" placeholder="漢字…" autocomplete="off" spellcheck="false" autocorrect="off">
-      <div class="feedback-row" id="fb-english"></div>`
+      ? `<div class="input-label">Pinyin + Character <div class="streak-dots" id="dots-main"></div></div>
+      <input class="study-input chinese-input" id="inp-main" type="text" placeholder="e.g. gǒu 狗" autocomplete="off" spellcheck="false" autocorrect="off" autocapitalize="off">
+      <div class="feedback-row" id="fb-main"></div>`
       : `<div class="input-label">Character <div class="streak-dots" id="dots-main"></div></div>
-      <input class="study-input chinese-input" id="inp-main" type="text" placeholder="漢字…" autocomplete="off" spellcheck="false" autocorrect="off">
+      <input class="study-input chinese-input" id="inp-main" type="text" placeholder="漢字…" autocomplete="off" spellcheck="false" autocorrect="off" autocapitalize="off">
       <div class="feedback-row" id="fb-main"></div>`;
   }
 
@@ -187,7 +526,9 @@ function renderCard() {
   const inp=document.getElementById('inp-main');
   if(inp){
     inp.addEventListener('input',onInputChange);
-    inp.addEventListener('keydown',e=>{if(e.key==='Enter')checkAnswer(true);});
+    inp.addEventListener('compositionstart', () => { inp._composing = true; });
+    inp.addEventListener('compositionend', () => { setTimeout(()=>{ inp._composing = false; }, 50); });
+    inp.addEventListener('keydown',e=>{if(e.key==='Enter'){ e.preventDefault(); if(!inp._composing) checkAnswer(true);}});
     inp.addEventListener('paste',e=>e.preventDefault());
     inp.addEventListener('copy',e=>e.preventDefault());
     inp.addEventListener('cut',e=>e.preventDefault());
@@ -198,26 +539,38 @@ function renderCard() {
 // ── Pinyin mode matching helpers ──────────────────
 function splitPinyinInput(input) {
   input = input.trim();
+  // First try splitting on whitespace
   const tokens = input.split(/\s+/);
-  const cjk = [], latin = [];
-  for (const t of tokens) {
-    if (/[\u3400-\u9fff\uf900-\ufaff]/.test(t)) cjk.push(t);
-    else latin.push(t);
+  if (tokens.length > 1) {
+    const cjk = [], latin = [];
+    for (const t of tokens) {
+      if (/[\u3400-\u9fff\uf900-\ufaff]/.test(t)) cjk.push(t);
+      else latin.push(t);
+    }
+    return { charsTyped: cjk.join(''), pinyinTyped: latin.join(' ').trim() };
   }
-  return { charsTyped: cjk.join(''), pinyinTyped: latin.join(' ').trim() };
+  // No space — try CJK-first: 狗gou
+  const cjkFirst = input.match(/^([\u3400-\u9fff\uf900-\ufaff]+)(.+)$/);
+  if (cjkFirst) return { charsTyped: cjkFirst[1], pinyinTyped: cjkFirst[2].trim() };
+  // Try latin-first: gou狗
+  const latinFirst = input.match(/^([^\u3400-\u9fff\uf900-\ufaff]+)([\u3400-\u9fff\uf900-\ufaff]+)$/);
+  if (latinFirst) return { charsTyped: latinFirst[2], pinyinTyped: latinFirst[1].trim() };
+  // Only one type present
+  if (/[\u3400-\u9fff\uf900-\ufaff]/.test(input)) return { charsTyped: input, pinyinTyped: '' };
+  return { charsTyped: '', pinyinTyped: input };
 }
 
 function pinyinStrictMatch(typed, correct) {
-  const n = s => s.toLowerCase().replace(/\s+/g,'');
+  const n = s => s.trim().toLowerCase().replace(/\s+/g,'');
   return n(typed) === n(correct);
 }
 
 function onInputChange() {
-  const banner=document.getElementById('pinyin-hint-banner');
-  if(banner && banner.classList.contains('visible')) {
-    banner.classList.remove('visible');
-    const btn=document.getElementById('btn-reveal');
-    if(btn) btn.textContent='Reveal ✨';
+  // Hide the masked hint banner when user starts typing (but leave reveal-stage answer alone — it has its own clearOnType)
+  const w = currentWord;
+  if (w && w._hintStage === 'hinted') {
+    const banner=document.getElementById('pinyin-hint-banner');
+    if(banner && banner.classList.contains('visible')) banner.classList.remove('visible');
   }
   if(checking) return;
   const inp=document.getElementById('inp-main');
@@ -226,33 +579,77 @@ function onInputChange() {
 
 // Returns true if the input value is correct for current card/mode
 function checkAnswerLogic(val) {
+  val = val || '';
   const w=currentWord;
   const isPinyin = inputMethod==='pinyin';
   const isAB = studyMode==='AB';
   const effectivePhase = isAB ? (round2Set.has(w.idx) ? 'B' : 'A') : phase;
 
   if (effectivePhase==='A') {
-    // Always just English
-    return engMatch(val, w.english);
+    // Single box: character + English (e.g. "狗 dog"), space or no space
+    const val2 = val.trim();
+    // Split on first space, or try no-space if no space found
+    const spaceIdx = val2.search(/\s+/);
+    let charsTyped, engTyped;
+    if (spaceIdx > -1) {
+      charsTyped = val2.slice(0, spaceIdx).trim();
+      engTyped = val2.slice(spaceIdx).trim();
+    } else {
+      // No space — try matching leading CJK chars vs trailing latin
+      const cjkMatch = val2.match(/^([\u3400-\u9fff\uf900-\ufaff]+)(.*)/);
+      if (cjkMatch) {
+        charsTyped = cjkMatch[1];
+        engTyped = cjkMatch[2].trim();
+      } else {
+        charsTyped = '';
+        engTyped = val2;
+      }
+    }
+    const safeChar = (selectedScript==='traditional' ? w.traditional : w.simplified) || w.simplified || w.traditional || '';
+    return norm(charsTyped) === norm(safeChar) && engMatch(engTyped, w.english);
   } else {
     // Phase B
     if (isPinyin) {
       // Need pinyin + character (either order)
       const {charsTyped, pinyinTyped} = splitPinyinInput(val);
-      return norm(charsTyped)===norm(w.chinese) && pinyinStrictMatch(pinyinTyped, w.pinyin);
+      const safeCharB = (selectedScript==='traditional' ? w.traditional : w.simplified) || w.simplified || w.traditional || '';
+      return norm(charsTyped)===norm(safeCharB) && pinyinStrictMatch(pinyinTyped, w.pinyin);
     } else {
       // BPMF: character only
-      return norm(val)===norm(w.chinese);
+      const safeCharB = (selectedScript==='traditional' ? w.traditional : w.simplified) || w.simplified || w.traditional || '';
+      return norm(val)===norm(safeCharB);
     }
   }
 }
 
 function checkAnswer(manual=true) {
   if(checking) return;
-  const w=currentWord, inp=document.getElementById('inp-main');
+  const w=currentWord;
+  if(!w) return;
+  const inp=document.getElementById('inp-main');
   if(!inp) return;
-  const ok=checkAnswerLogic(inp.value);
+  const val = (inp.value || '');
+  const ok=checkAnswerLogic(val);
   const isAB = studyMode==='AB';
+
+  // If card was marked wrong this round (via hint/reveal), a correct answer still doesn't count
+  if(ok && w._wrongThisRound){
+    inp.classList.add('wrong');
+    const fb=document.getElementById('fb-main');
+    if(fb) fb.innerHTML=`<span style="font-size:12px;color:var(--muted);font-family:'Syne',sans-serif">✓ Correct — but you already used a hint. You'll get another chance! 🔄</span>`;
+    // Move card to end of queue without resetting count
+    queue.shift();
+    if (studyAlgorithm === 'batched') {
+      batchQueue = batchQueue.filter(i => i !== w.idx);
+      batchQueue.push(w.idx);
+    } else {
+      queue.push(w.idx);
+    }
+    window._mustRetype = true;
+    setTimeout(()=>{ inp.value=''; inp.classList.remove('wrong','correct'); inp.focus(); window._mustRetype=false;
+      studyAlgorithm==='batched' ? nextBatchedCard() : nextCard(); }, 1400);
+    return;
+  }
 
   if(ok){
     checking=true;
@@ -263,73 +660,88 @@ function checkAnswer(manual=true) {
     stats.correct++;
     queue.shift();
 
+    if (studyAlgorithm === 'batched') {
+      _batchedMarkCorrect(w);
+    } else {
+    const now = Date.now();
     if (isAB) {
-      if (!cardCounts[w.idx]) cardCounts[w.idx]={r1:0,r2:0};
+      if (!cardCounts[w.idx]) cardCounts[w.idx] = _initCardCount();
       if (round2Set.has(w.idx)) {
         // Round 2
-        cardCounts[w.idx].r2++;
-        if (cardCounts[w.idx].r2 >= 2) {
+        cardCounts[w.idx].r2.count++;
+        if (cardCounts[w.idx].r2.count >= 2) {
           doneSet.add(w.idx); // mastered!
         } else {
-          placeInQueue(w.idx, adaptiveCorrectOffset());
+          cardCounts[w.idx].r2.retryAfter = now + 120000; // 2min lock-in
         }
       } else {
         // Round 1
-        cardCounts[w.idx].r1++;
-        if (cardCounts[w.idx].r1 >= 2) {
+        cardCounts[w.idx].r1.count++;
+        if (cardCounts[w.idx].r1.count >= 2) {
           round2Set.add(w.idx); // promote to round 2
-          placeInQueue(w.idx, 1); // bring back soon as round 2 card
+          cardCounts[w.idx].r2.retryAfter = 0; // show round 2 soon
         } else {
-          placeInQueue(w.idx, adaptiveCorrectOffset());
+          cardCounts[w.idx].r1.retryAfter = now + 120000; // 2min lock-in
         }
       }
     } else {
-      // Single mode A or B — need correctOnce (2 correct to master)
-      if(correctOnce.has(w.idx)){
-        correctOnce.delete(w.idx); doneSet.add(w.idx);
+      // Single mode A or B
+      if (!cardCounts[w.idx]) cardCounts[w.idx] = _initCardCount();
+      cardCounts[w.idx].count++;
+      if (cardCounts[w.idx].count >= 2) {
+        doneSet.add(w.idx); // mastered!
       } else {
-        correctOnce.add(w.idx);
-        placeInQueue(w.idx, adaptiveCorrectOffset());
+        cardCounts[w.idx].retryAfter = now + 120000; // 2min lock-in
+        correctOnce.add(w.idx); // for dot rendering
       }
+    }
     }
 
     renderStreakDots(w.idx);
-    const chText = selectedScript==='traditional' ? w.traditional : w.simplified;
-    setTimeout(async () => {
-      await speakChinese(chText || w.simplified);
-      setTimeout(nextCard, 150);
-    }, 150);
+    const chText = w.chinese || (selectedScript==='traditional' ? w.traditional : w.simplified) || w.simplified || w.traditional || '';
+    if (areFeedbackSoundsOn()) { playCorrectTone(); setTimeout(() => { speakChinese(chText).then(() => setTimeout(nextCard, 150)); }, 700); } else { speakChinese(chText).then(() => setTimeout(nextCard, 150)); }
 
   } else if(manual){
     inp.classList.add('wrong');
+    playWrongTone();
     const fb=document.getElementById('fb-main');
     const isPinyin = inputMethod==='pinyin';
     const effectivePhase = isAB ? (round2Set.has(w.idx) ? 'B' : 'A') : phase;
+    const safeCharHint = (selectedScript==='traditional' ? w.traditional : w.simplified) || w.simplified || w.traditional || '';
     let correctHint;
     if (effectivePhase==='A') {
-      correctHint = w.english;
+      correctHint = `${safeCharHint} ${w.english}`;
     } else {
-      correctHint = isPinyin ? `${w.pinyin} ${w.chinese}` : w.chinese;
+      correctHint = isPinyin ? `${w.pinyin} ${safeCharHint}` : safeCharHint;
     }
-    const isCh = effectivePhase==='B';
+    const isCh = true;
     if(fb) fb.innerHTML=`<span class="feedback-wrong">✗</span> <span class="feedback-answer ${isCh?'chinese-answer':''}">${esc(correctHint)}</span>`;
     stats.wrong++;
     wordErrorCounts[w.idx] = (wordErrorCounts[w.idx] || 0) + 1;
 
-    // Reset count for this card
+    if (studyAlgorithm === 'batched') {
+      _batchedMarkWrong(w);
+    } else {
+    // Reset count and set 30s cooldown
+    const now = Date.now();
     if (isAB) {
-      if (!cardCounts[w.idx]) cardCounts[w.idx]={r1:0,r2:0};
+      if (!cardCounts[w.idx]) cardCounts[w.idx] = _initCardCount();
       if (round2Set.has(w.idx)) {
-        cardCounts[w.idx].r2=0;
+        cardCounts[w.idx].r2.count = 0;
+        cardCounts[w.idx].r2.retryAfter = now + 30000;
       } else {
-        cardCounts[w.idx].r1=0;
+        cardCounts[w.idx].r1.count = 0;
+        cardCounts[w.idx].r1.retryAfter = now + 30000;
       }
     } else {
+      if (!cardCounts[w.idx]) cardCounts[w.idx] = _initCardCount();
+      cardCounts[w.idx].count = 0;
+      cardCounts[w.idx].retryAfter = now + 30000;
       correctOnce.delete(w.idx);
+    }
     }
 
     queue.shift();
-    placeInQueue(w.idx,5+Math.floor(Math.random()*2));
     renderStreakDots(w.idx);
     window._mustRetype = true;
     setTimeout(()=>{ inp.value=''; inp.classList.remove('wrong'); inp.focus(); window._mustRetype=false; }, 900);
@@ -340,27 +752,53 @@ function renderStreakDots(idx) {
   const el=document.getElementById('dots-main'); if(!el) return;
   el.innerHTML='';
   const isAB = studyMode==='AB';
+  const counts = cardCounts[idx] || _initCardCount();
+  const isDone = doneSet.has(idx);
+
   if (isAB) {
-    // 4 dots: 2 for round1, 2 for round2
-    const counts = cardCounts[idx] || {r1:0,r2:0};
+    // 2 dots total: dot 1 = Round A progress, dot 2 = Round B progress
+    // Each dot: empty → yellow (1 correct) → green (2 correct / done)
     const inR2 = round2Set.has(idx);
-    const isDone = doneSet.has(idx);
-    for(let i=0;i<2;i++){
-      const d=document.createElement('div');
-      const filled = isDone || (inR2 && i<2) || (!inR2 && counts.r1>i);
-      d.className='streak-dot'+(filled?' filled':'');
-      d.title='Round 1';
-      el.appendChild(d);
+    const r1Count = counts.r1 ? counts.r1.count : 0;
+    const r2Count = counts.r2 ? counts.r2.count : 0;
+
+    // Dot 1: Round A
+    const d1 = document.createElement('div');
+    const r1Done = inR2 || isDone; // promoted = both corrects done for r1
+    if (r1Done) {
+      d1.className = 'streak-dot filled'; // green
+    } else if (r1Count >= 1) {
+      d1.className = 'streak-dot half'; // yellow
+    } else {
+      d1.className = 'streak-dot';
     }
-    const sep=document.createElement('span');
-    sep.style.cssText='width:6px;display:inline-block';
-    el.appendChild(sep);
+    d1.title = 'Round A';
+    el.appendChild(d1);
+
+    // Dot 2: Round B
+    const d2 = document.createElement('div');
+    const r2Done = isDone;
+    if (r2Done) {
+      d2.className = 'streak-dot filled'; // green
+    } else if (inR2 && r2Count >= 1) {
+      d2.className = 'streak-dot half'; // yellow
+    } else {
+      d2.className = 'streak-dot';
+    }
+    d2.title = 'Round B';
+    el.appendChild(d2);
+  } else {
+    // Single mode: 2 dots — yellow on 1, green on 2
     for(let i=0;i<2;i++){
       const d=document.createElement('div');
-      const filled = isDone || (inR2 && counts.r2>i);
-      d.className='streak-dot'+(filled?' filled':'');
-      d.title='Round 2';
-el.appendChild(d);
+      if (isDone || counts.count > i) {
+        d.className = 'streak-dot filled';
+      } else if (i === 0 && counts.count === 1) {
+        d.className = 'streak-dot half';
+      } else {
+        d.className = 'streak-dot';
+      }
+      el.appendChild(d);
     }
   }
 }
@@ -374,30 +812,68 @@ function showToast(msg, duration=3500){
   clearTimeout(t._timer); t._timer=setTimeout(()=>t.style.opacity='0',duration);
 }
 // ── Audio: speak Chinese word after correct answer ────────────────────────
-function speakChinese(text) {
-  return new Promise(resolve => {
-    if (!text || !window.speechSynthesis) { resolve(); return; }
-    window.speechSynthesis.cancel();
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.lang = (profileData && profileData.accent) || 'zh-TW';
-    utter.rate = 0.85;
-    utter.pitch = 1.0;
-    const voices = window.speechSynthesis.getVoices();
-    const preferred = voices.find(v => v.lang === 'zh-TW') ||
-                      voices.find(v => v.lang === 'zh-CN') ||
-                      voices.find(v => v.lang.startsWith('zh'));
-    if (preferred) utter.voice = preferred;
-    utter.onend = () => resolve();
-    utter.onerror = () => resolve();
-    // Fallback: resolve after 3s max in case onend never fires
-    const fallback = setTimeout(resolve, 3000);
-    utter.onend = () => { clearTimeout(fallback); resolve(); };
-    window.speechSynthesis.speak(utter);
-  });
+let _cachedVoices = [];
+function _loadVoices() {
+  const v = window.speechSynthesis.getVoices();
+  if (v.length) _cachedVoices = v;
 }
 if (window.speechSynthesis) {
-  window.speechSynthesis.getVoices();
-  window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+  window.speechSynthesis.onvoiceschanged = _loadVoices;
+  _loadVoices();
+}
+
+function _getChineseVoice(lang) {
+  if (!_cachedVoices.length) _loadVoices();
+  return _cachedVoices.find(v => v.lang === lang) ||
+         _cachedVoices.find(v => v.lang === 'zh-TW') ||
+         _cachedVoices.find(v => v.lang === 'zh-CN') ||
+         _cachedVoices.find(v => v.lang.startsWith('zh')) ||
+         null;
+}
+
+function speakChinese(text) {
+  return new Promise(resolve => {
+    if (!text || !window.speechSynthesis) {
+      console.warn('[speakChinese] no text or no speechSynthesis');
+      resolve(); return;
+    }
+    const lang = (profileData && profileData.accent) || 'zh-TW';
+    const voices = window.speechSynthesis.getVoices();
+    console.log('[speakChinese] text:', text, '| lang:', lang, '| voices available:', voices.length);
+
+    const doSpeak = () => {
+      window.speechSynthesis.cancel();
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang = lang;
+      utter.rate = 0.85;
+      utter.pitch = 1.0;
+      const voice = _getChineseVoice(lang);
+      console.log('[speakChinese] using voice:', voice ? voice.name : 'none (default)');
+      if (voice) utter.voice = voice;
+      const fallback = setTimeout(() => {
+        console.warn('[speakChinese] fallback timeout fired — onend never came');
+        resolve();
+      }, 4000);
+      utter.onstart = () => console.log('[speakChinese] onstart fired');
+      utter.onend = () => { console.log('[speakChinese] onend fired'); clearTimeout(fallback); resolve(); };
+      utter.onerror = (e) => { console.error('[speakChinese] onerror:', e.error); clearTimeout(fallback); resolve(); };
+      window.speechSynthesis.speak(utter);
+      console.log('[speakChinese] speak() called, speaking:', window.speechSynthesis.speaking);
+    };
+
+    if (_cachedVoices.length) {
+      doSpeak();
+    } else {
+      const waited = Date.now();
+      const poll = setInterval(() => {
+        _loadVoices();
+        if (_cachedVoices.length || Date.now() - waited > 1000) {
+          clearInterval(poll);
+          doSpeak();
+        }
+      }, 50);
+    }
+  });
 }
 
 function norm(s){return s.trim().toLowerCase().replace(/\s+/g,' ');}
@@ -405,134 +881,230 @@ function engMatch(input,answer){
   const a=answer.split(/[,\/]/).map(s=>s.trim().toLowerCase());
   return a.some(x=>x===input.trim().toLowerCase());
 }
-function placeInQueue(idx,offset){
-  const pos=Math.max(1,Math.min(offset,queue.length));
-  queue.splice(pos,0,idx);
+// ── Pause / Resume: convert absolute timestamps ↔ remaining ms ───────────
+function pauseStudyTimers() {
+  const now = Date.now();
+  Object.values(cardCounts).forEach(cc => {
+    if (cc.retryAfter !== undefined) {
+      cc._remainingMs = Math.max(0, cc.retryAfter - now);
+      cc.retryAfter = Infinity;
+    } else {
+      if (cc.r1) { cc.r1._remainingMs = Math.max(0, cc.r1.retryAfter - now); cc.r1.retryAfter = Infinity; }
+      if (cc.r2) { cc.r2._remainingMs = Math.max(0, cc.r2.retryAfter - now); cc.r2.retryAfter = Infinity; }
+    }
+  });
 }
 
-// Adaptive spacing: how far ahead to place a card after first correct
-function adaptiveCorrectOffset() {
-  const remaining = queue.length;
-  if (remaining <= 15) return remaining;           // end of deck
-  if (remaining <= 30) return Math.floor(remaining / 2); // halfway
-  return 10 + Math.floor(Math.random() * 3);       // 10-12 ahead
+function resumeStudyTimers() {
+  const now = Date.now();
+  Object.values(cardCounts).forEach(cc => {
+    if (cc._remainingMs !== undefined) {
+      cc.retryAfter = cc._remainingMs > 0 ? now + cc._remainingMs : 0;
+      delete cc._remainingMs;
+    } else {
+      if (cc.r1 && cc.r1._remainingMs !== undefined) {
+        cc.r1.retryAfter = cc.r1._remainingMs > 0 ? now + cc.r1._remainingMs : 0;
+        delete cc.r1._remainingMs;
+      }
+      if (cc.r2 && cc.r2._remainingMs !== undefined) {
+        cc.r2.retryAfter = cc.r2._remainingMs > 0 ? now + cc.r2._remainingMs : 0;
+        delete cc.r2._remainingMs;
+      }
+    }
+  });
+  nextCard();
 }
+
+// ── Progressive hint: first tap = masked hint, second tap = full reveal ───
+// State tracked per-card via w._hintStage: undefined → 'hinted' → 'revealed'
 
 function askRobbieHint(){
   const w=currentWord;
   if(!w) return;
-  // Check if user has opted out of disclaimer this session
-  if(window._robbieHintNoAsk) {
-    doRobbieHint();
+
+  if (!w._hintStage) {
+    // ── Stage 1: masked hint ─────────────────────────────────────────────
+    _markHintWrong(w);
+    playHintTone();
+    const inp = document.getElementById('inp-main');
+    if (inp) { inp.classList.add('wrong'); setTimeout(() => inp.classList.remove('wrong'), 600); }
+    stats.reveals++;
+
+    const isAB = studyMode==='AB';
+    const effectivePhase = isAB ? (round2Set.has(w.idx) ? 'B' : 'A') : phase;
+    let hintHtml;
+    if (effectivePhase==='A') {
+      const syllables = w.pinyin.split(' ');
+      const masked = syllables.map(s => {
+        if (s.length <= 1) return s;
+        const mid = Math.ceil(s.length / 2);
+        return s[0] + '_'.repeat(mid - 1) + s[mid] + (s.length > mid + 1 ? '…' : '');
+      }).join(' ');
+      hintHtml = `<strong>🧑‍🏫 Robbie:</strong> Pinyin → <span style="font-family:'DM Mono',monospace;letter-spacing:2px;color:var(--gold)">${esc(masked)}</span>`;
+    } else {
+      const words = w.english.split(' ');
+      const masked = words.map((wd, i) => i === 0 ? wd[0] + '_'.repeat(Math.max(1, wd.length - 1)) : wd[0] + '…').join(' ');
+      hintHtml = `<strong>🧑‍🏫 Robbie:</strong> English → <span style="font-family:'DM Mono',monospace;color:var(--gold)">${esc(masked)}</span>`;
+    }
+
+    const banner = document.getElementById('pinyin-hint-banner');
+    if (banner) { banner.innerHTML = hintHtml; banner.classList.add('visible'); }
+
+    const btn = document.getElementById('btn-robbie');
+    if (btn) btn.textContent = 'Reveal answer 👁';
+
+    w._hintStage = 'hinted';
+
+  } else {
+    // ── Stage 2: full reveal ─────────────────────────────────────────────
+    const isAB = studyMode==='AB';
+    const effectivePhase = isAB ? (round2Set.has(w.idx) ? 'B' : 'A') : phase;
+    const safeChar = w.chinese || (selectedScript==='traditional' ? w.traditional : w.simplified) || w.simplified || w.traditional || '';
+
+    let revealHtml;
+    if (effectivePhase==='B') {
+      revealHtml = `<strong>${esc(w.pinyin)}</strong> &nbsp;·&nbsp; ${esc(w.english)}`;
+    } else {
+      revealHtml = `<strong>${esc(w.pinyin)}</strong> &nbsp;·&nbsp; <span class="chinese-answer">${esc(safeChar)}</span>`;
+    }
+
+    // Show full answer in feedback row (clears on type) instead of banner
+    const fb = document.getElementById('fb-main');
+    const inp = document.getElementById('inp-main');
+    const banner = document.getElementById('pinyin-hint-banner');
+    if (banner) banner.classList.remove('visible');
+    if (fb) fb.innerHTML = `<span style="font-family:'DM Mono',monospace;font-size:15px;color:var(--ink)">${revealHtml}</span>`;
+
+    // Clear the moment user types
+    const clearOnType = () => { if(fb) fb.innerHTML=''; inp && inp.removeEventListener('input', clearOnType); };
+    if (inp) { inp.value=''; inp.classList.remove('correct','wrong'); inp.focus(); inp.addEventListener('input', clearOnType); }
+
+    const btn = document.getElementById('btn-robbie');
+    if (btn) btn.textContent = '✨ Revealed';
+
+    w._hintStage = 'revealed';
+    w.wasRevealed = true;
+    stats.reveals++;
+  }
+}
+
+function alreadyKnowIt(){
+  const w=currentWord;
+  if(!w) return;
+  const isAB = studyMode==='AB';
+  if(!cardCounts[w.idx]) cardCounts[w.idx]=_initCardCount();
+  const now = Date.now();
+  window._alreadyKnownCount = (window._alreadyKnownCount || 0) + 1;
+  playAlreadyKnowTone();
+
+  if (studyAlgorithm === 'batched') {
+    // In batched mode: mark done and remove from batchQueue
+    if (!cardCounts[w.idx]) cardCounts[w.idx] = { count: 0 };
+    const isAB = studyMode === 'AB';
+    if (isAB) {
+      if (!cardCounts[w.idx].r1) cardCounts[w.idx] = { r1:{count:2}, r2:{count:2} };
+      if (round2Set.has(w.idx)) { cardCounts[w.idx].r2.count = 2; }
+      else { cardCounts[w.idx].r1.count = 2; round2Set.add(w.idx); cardCounts[w.idx].r2 = {count:2}; }
+    } else {
+      cardCounts[w.idx].count = 2;
+    }
+    doneSet.add(w.idx);
+    batchQueue = batchQueue.filter(i => i !== w.idx);
+    renderStreakDots(w.idx);
+    nextBatchedCard();
     return;
   }
-  // Show disclaimer modal
-  const existing = document.getElementById('robbie-hint-modal');
-  if(existing) existing.remove();
-  const modal = document.createElement('div');
-  modal.id = 'robbie-hint-modal';
-  modal.className = 'edit-word-modal';
-  modal.innerHTML = `
-    <div class="edit-word-box" style="max-width:320px;text-align:center;background:var(--paper) !important">
-      <div style="text-align:center;margin-bottom:4px">👨🏻
-      <h3 style="margin:0 0 8px;color:var(--ink)">Ask Teacher Robbie?</h3>
-      <div style="font-size:13px;color:var(--ink);font-family:Syne,sans-serif;line-height:1.6;margin-bottom:14px;background:rgba(192,57,43,0.07);padding:10px;border-radius:8px;border:1px solid rgba(192,57,43,0.15)">
-        If you ask for a hint, this card will be automatically marked <strong>wrong</strong> and it will cost you <strong>$0.25 Robbie Bucks</strong>.
-      </div>
-      <div style="display:flex;flex-direction:column;gap:8px">
-        <button class="btn-primary" style="padding:12px" onclick="confirmRobbieHint(false)">💸 Pay up ($0.25) — give me the hint!</button>
-        <button class="btn-skip" style="padding:12px" onclick="document.getElementById('robbie-hint-modal').remove()">Nevermind</button>
-        <button style="background:none;border:none;color:var(--muted);font-size:11px;font-family:Syne,sans-serif;cursor:pointer;padding:4px" 
-          onclick="confirmRobbieHint(true)">Don't ask me again this session — just give hint</button>
-      </div>
-    </div>`;
-  document.body.appendChild(modal);
-  modal.addEventListener('click', e=>{ if(e.target===modal) modal.remove(); });
+
+  if(isAB){
+    if(round2Set.has(w.idx)){
+      // In round 2 — mark fully done
+      cardCounts[w.idx].r2.count=2;
+      doneSet.add(w.idx);
+    } else {
+      // In round 1 — promote to round 2 immediately, skip round 1 counts
+      cardCounts[w.idx].r1.count=2;
+      round2Set.add(w.idx);
+      cardCounts[w.idx].r2.retryAfter=0;
+    }
+  } else {
+    // Single mode: mark fully mastered (count=2 → done)
+    cardCounts[w.idx].count=2;
+    doneSet.add(w.idx);
+  }
+
+  renderStreakDots(w.idx);
+  queue.shift();
+  nextCard();
 }
 
-function confirmRobbieHint(noAskAgain) {
-  if(noAskAgain) window._robbieHintNoAsk = true;
-  const modal = document.getElementById('robbie-hint-modal');
-  if(modal) modal.remove();
-  doRobbieHint();
-}
-
-function doRobbieHint(){
-  const w=currentWord;
-  const banner=document.getElementById('pinyin-hint-banner');
-  if(!banner||!w) return;
-  // Mark wrong immediately (cost the user)
+function _markHintWrong(w) {
+  if (w._hintMarkedWrong) return;
+  w._hintMarkedWrong = true;
+  w._wrongThisRound = true;
   stats.wrong++;
-  correctOnce.delete(w.idx);
-  // Generate fill-in-the-blank pinyin hint
-  let hintHtml;
-  if(phase==='A'){
-    const py=w.pinyin;
-    const syllables=py.split(' ');
-    const masked=syllables.map(s=>{
-      if(s.length<=1) return s;
-      const mid=Math.ceil(s.length/2);
-      return s[0]+'_'.repeat(mid-1)+s[mid]+(s.length>mid+1?'…':'');
-    }).join(' ');
-    hintHtml=`<strong>🧑‍🏫 Robbie:</strong> Pinyin → <span style="font-family:'DM Mono',monospace;letter-spacing:2px;color:var(--gold)">${esc(masked)}</span>`;
-  } else {
-    const eng=w.english;
-    const words=eng.split(' ');
-    const masked=words.map((wd,i)=>i===0?wd[0]+'_'.repeat(Math.max(1,wd.length-1)):wd[0]+'…').join(' ');
-    hintHtml=`<strong>🧑‍🏫 Robbie:</strong> English → <span style="font-family:'DM Mono',monospace;color:var(--gold)">${esc(masked)}</span>`;
+  wordErrorCounts[w.idx] = (wordErrorCounts[w.idx] || 0) + 1;
+  if (studyAlgorithm === 'batched') {
+    _batchedMarkWrong(w);
+    return;
   }
-  banner.innerHTML=hintHtml;
-  banner.classList.add('visible');
-  // Deduct Robbie Bucks (free until $25 total earned, then costs $0.25, never goes negative)
-  if ((robbieBucks || 0) >= 25) {
-    robbieBucks = Math.max(0, (robbieBucks || 0) - 0.25);
-    saveBucks();
-    showToast('🧑‍🏫 -$0.25 Robbie Bucks', 2000);
+  const now = Date.now();
+  const isAB = studyMode === 'AB';
+  if (!cardCounts[w.idx]) cardCounts[w.idx] = _initCardCount();
+  if (isAB) {
+    if (round2Set.has(w.idx)) { cardCounts[w.idx].r2.count=0; cardCounts[w.idx].r2.retryAfter=now+30000; }
+    else { cardCounts[w.idx].r1.count=0; cardCounts[w.idx].r1.retryAfter=now+30000; }
   } else {
-    showToast('🧑‍🏫 Hint is free! (Hints cost $0.25 once you hit $25.00)', 2500);
+    cardCounts[w.idx].count=0; cardCounts[w.idx].retryAfter=now+30000;
+    correctOnce.delete(w.idx);
   }
-  stats.reveals++;
-  // hint btn resets with next card — no used class
+  renderStreakDots(w.idx);
 }
 
-function revealPinyin(){
-  const w=currentWord, banner=document.getElementById('pinyin-hint-banner'), btn=document.getElementById('btn-reveal');
-  if(!banner) return;
-  if (phase==='B') {
-    // Type B: show pinyin + english
-    banner.innerHTML = `<strong>${esc(w.pinyin)}</strong> &nbsp;·&nbsp; ${esc(w.english)}`;
-  } else {
-    // Type A: show pinyin + character
-    banner.innerHTML = `<strong>${esc(w.pinyin)}</strong> &nbsp;·&nbsp; <span class="chinese-answer">${esc(w.chinese)}</span>`;
-  }
-  // Same behavior for both: stay on card, hide when user types, can reveal unlimited times
-  banner.classList.add('visible');
-  if(btn) btn.textContent='✨ Revealed';
-  stats.reveals++;
-  w.wasRevealed = true;
-}
-function hidePinyinBanner(){
-  const b=document.getElementById('pinyin-hint-banner'); if(b) b.classList.remove('visible');
-  const btn=document.getElementById('btn-reveal'); if(btn){btn.classList.remove('used');btn.textContent='Reveal ✨';}
-}
 function skipWord(){
   const w=currentWord;
-  const inp=document.getElementById('inp-main');
-  const correctAns = phase==='A' ? w.chinese : w.english;
-  const isCh = phase==='A';
+  if(!w) return;
+  playAlreadyKnowTone();
+  stats.wrong++;
+  wordErrorCounts[w.idx] = (wordErrorCounts[w.idx] || 0) + 1;
+
+  const isAB = studyMode==='AB';
+  const effectivePhase = isAB ? (round2Set.has(w.idx) ? 'B' : 'A') : phase;
+  const safeChar = w.chinese || (selectedScript==='traditional' ? w.traditional : w.simplified) || w.simplified || w.traditional || '';
+  let correctHint;
+  if (effectivePhase==='A') { correctHint = `${safeChar} ${w.english}`; }
+  else { correctHint = inputMethod==='pinyin' ? `${w.pinyin} ${safeChar}` : safeChar; }
+
   const fb=document.getElementById('fb-main');
+  if(fb) fb.innerHTML=`<span class="feedback-wrong">✗</span> <span class="feedback-answer chinese-answer">${esc(correctHint)}</span>`;
 
-  // Show answer OUTSIDE the textbox as a hint
-  if(fb) fb.innerHTML=`<span style="color:var(--muted);font-size:13px">Type: </span><span class="feedback-answer ${isCh?'chinese-answer':''}" style="user-select:none">${esc(correctAns)}</span><span style="color:var(--muted);font-size:12px"> to skip →</span>`;
+  w._wrongThisRound = true;
+  if (studyAlgorithm === 'batched') {
+    _batchedMarkWrong(w);
+  } else {
+    const now = Date.now();
+    if (!cardCounts[w.idx]) cardCounts[w.idx] = _initCardCount();
+    if (isAB) {
+      if (round2Set.has(w.idx)) { cardCounts[w.idx].r2.count=0; cardCounts[w.idx].r2.retryAfter=now+30000; }
+      else { cardCounts[w.idx].r1.count=0; cardCounts[w.idx].r1.retryAfter=now+30000; }
+    } else {
+      cardCounts[w.idx].count=0; cardCounts[w.idx].retryAfter=now+30000;
+      correctOnce.delete(w.idx);
+    }
+    queue.shift(); queue.push(w.idx);
+  }
+  renderStreakDots(w.idx);
+  setTimeout(()=>{ studyAlgorithm==='batched' ? nextBatchedCard() : nextCard(); }, 1200);
+}
 
-  // Clear input and focus so user must type it themselves
-  if(inp){ inp.value=''; inp.classList.remove('correct','wrong'); inp.focus(); }
+function hidePinyinBanner(){
+  const b=document.getElementById('pinyin-hint-banner'); if(b) b.classList.remove('visible');
+  const btn=document.getElementById('btn-robbie'); if(btn) btn.textContent='Ask Teacher Robbie for a hint 🧑‍🏫';
 }
 function clearInputs(){
   checking=false;
   const inp=document.getElementById('inp-main'); if(inp){inp.value='';inp.classList.remove('correct','wrong');}
   const fb=document.getElementById('fb-main'); if(fb) fb.innerHTML='';
-  hidePinyinBanner();
+  hidePinyinBanner(); // also resets btn-robbie label
 }
 
 // ═══════════════════════════════════════
@@ -551,8 +1123,17 @@ function updateQueue(){
   if(!el) return;
   const chips = activeSet.map((i,pos) => {
     let cls='queue-chip';
+    // "halfway" = has 1 correct so far (count=1 or promoted to r2 in AB)
+    const isHalfway = (() => {
+      if (doneSet.has(i)) return false;
+      const cc = cardCounts[i];
+      if (!cc) return false;
+      const isAB = studyMode === 'AB';
+      if (isAB) return round2Set.has(i) ? cc.r2.count === 1 : cc.r1.count === 1;
+      return cc.count === 1;
+    })();
     if(doneSet.has(i)) cls+=' done';
-    else if(correctOnce.has(i)) cls+=' halfway';
+    else if(isHalfway) cls+=' halfway';
     else if(queue[0]===i) cls+=' current';
     const w=vocab[i]; const ch=selectedScript==='traditional'?w.traditional:w.simplified;
     const label = phase==='A' ? w.english : ch;
@@ -563,12 +1144,13 @@ function updateQueue(){
   el.innerHTML = chips + batchInfo;
 }
 function showComplete(){
-  const wordsCompleted = doneSet.size;
+  const wordsCompleted = Math.max(0, doneSet.size - (window._alreadyKnownCount || 0));
   awardBucks(wordsCompleted);
   clearNowStudying();
   const unitName = selectedUnitIds.map(id => units.find(u=>u.id===id)?.name).filter(Boolean).join(', ');
   broadcastMastery(unitName, wordsCompleted);
   showScreen('screen-complete');
+  playCelebrationSound();
   document.getElementById('complete-msg').textContent=`You typed out all ${vocab.length} words correctly twice!`;
 
   const bucksHtml = profileData

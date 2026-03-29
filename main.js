@@ -84,9 +84,11 @@ let studyPlan = 'full'; // 'full','half1','half2','custom'
 let customWordIndices = null; // array of indices for custom plan
 const STUDY_PROGRESS_KEY = 'hanziplay_study_progress'; // 'shuffle' or 'list'
 let batchSize = 5;
+let studyAlgorithm = localStorage.getItem('hanzi_studyAlgorithm') || 'robbies'; // 'robbies' | 'batched'
+let batchedBatchSize = parseInt(localStorage.getItem('hanzi_batchedBatchSize')) || 5;
 let activeSet = []; // current batch of word indices being studied
-let selectedScript = 'simplified';
-let inputMethod = 'bpmf'; // 'bpmf' | 'pinyin'
+let selectedScript = (function(){ try { const p = JSON.parse(localStorage.getItem('hanziplay_profile')); return (p && p.script) ? p.script : 'simplified'; } catch { return 'simplified'; } })();
+let inputMethod = (function(){ try { const p = JSON.parse(localStorage.getItem('hanziplay_profile')); return (p && p.inputMethod) ? p.inputMethod : 'bpmf'; } catch { return 'bpmf'; } })(); // 'bpmf' | 'pinyin'
 let queue = [], doneSet = new Set(), correctOnce = new Set();
 let currentWord = null, checking = false;
 let phase = 'A';
@@ -154,12 +156,16 @@ function renderHome() {
 let settingsDraftScript = null;
 let settingsDraftInput = null;
 let settingsDraftAccent = null;
+let settingsDraftAlgorithm = null;
+let settingsDraftBatchSize = null;
 
 function showSettings() {
   // Load current values
   settingsDraftScript = selectedScript || (profileData && profileData.script) || 'simplified';
   settingsDraftInput = inputMethod || (profileData && profileData.inputMethod) || 'bpmf';
   settingsDraftAccent = (profileData && profileData.accent) || 'zh-TW';
+  settingsDraftAlgorithm = studyAlgorithm;
+  settingsDraftBatchSize = batchedBatchSize;
   // Highlight correct buttons
   ['simplified','traditional'].forEach(s => {
     const b = document.getElementById('s-btn-'+s);
@@ -173,6 +179,14 @@ function showSettings() {
     const b = document.getElementById(id);
     if (b) { b.classList.toggle('active', lang === settingsDraftAccent); }
   });
+  ['robbies','batched'].forEach(a => {
+    const b = document.getElementById('s-algo-'+a);
+    if (b) b.classList.toggle('active', a === settingsDraftAlgorithm);
+  });
+  const bsInput = document.getElementById('s-batch-size');
+  if (bsInput) bsInput.value = settingsDraftBatchSize;
+  const batchSection = document.getElementById('s-batch-section');
+  if (batchSection) batchSection.style.display = settingsDraftAlgorithm === 'batched' ? '' : 'none';
   showScreen('screen-settings');
   document.getElementById('btn-home-header').style.display = '';
 }
@@ -201,10 +215,29 @@ function settingsSelectAccent(lang) {
   });
 }
 
+function settingsSelectAlgorithm(a) {
+  settingsDraftAlgorithm = a;
+  ['robbies','batched'].forEach(v => {
+    const b = document.getElementById('s-algo-'+v);
+    if (b) b.classList.toggle('active', v === a);
+  });
+  const batchSection = document.getElementById('s-batch-section');
+  if (batchSection) batchSection.style.display = a === 'batched' ? '' : 'none';
+}
+
 function saveSettings() {
   // 1. Update global operational state
   selectedScript = settingsDraftScript || selectedScript;
   inputMethod = settingsDraftInput || inputMethod;
+  if (settingsDraftAlgorithm) {
+    studyAlgorithm = settingsDraftAlgorithm;
+    localStorage.setItem('hanzi_studyAlgorithm', studyAlgorithm);
+  }
+  const bsInput = document.getElementById('s-batch-size');
+  if (bsInput) {
+    const val = parseInt(bsInput.value);
+    if (val >= 1) { batchedBatchSize = val; localStorage.setItem('hanzi_batchedBatchSize', val); }
+  }
 
   // 2. Persist to local profile data
   if (profileData) {
@@ -217,12 +250,18 @@ function saveSettings() {
     if (firebaseUser && window._fbDb) {
       pushProfileToFirebase();
     }
+  } else {
+    // No profile yet — save to a minimal local record so settings persist
+    const bare = JSON.parse(localStorage.getItem('hanziplay_profile') || '{}');
+    bare.script = selectedScript;
+    bare.inputMethod = inputMethod;
+    if (settingsDraftAccent) bare.accent = settingsDraftAccent;
+    localStorage.setItem('hanziplay_profile', JSON.stringify(bare));
   }
 
-  // 4. Update UI helpers
-  if (settingsDraftAccent) {
-    draftAccent = settingsDraftAccent;
-    selectAccent(settingsDraftAccent);
+  // 4. Update active accent for speech synthesis
+  if (settingsDraftAccent && profileData) {
+    profileData.accent = settingsDraftAccent;
   }
 
   // 5. Ensure any active session inherits these changes

@@ -35,6 +35,13 @@ let draftName='', draftZodiac=null, draftVibe=null, draftColor=null, draftAccent
 function loadProfile() {
   try { profileData = JSON.parse(localStorage.getItem(PROFILE_KEY)); } catch { profileData = null; }
   try { robbieBucks = parseInt(localStorage.getItem(BUCKS_KEY))||0; } catch { robbieBucks=0; }
+
+  // Restore saved settings into global state so they persist across sessions
+  if (profileData) {
+    if (profileData.script) selectedScript = profileData.script;
+    if (profileData.inputMethod) inputMethod = profileData.inputMethod;
+    if (profileData.accent) draftAccent = profileData.accent;
+  }
 }
 function saveProfileData() {
   localStorage.setItem(PROFILE_KEY, JSON.stringify(profileData));
